@@ -41,8 +41,10 @@ class Haruspex(QMainWindow):
         self.layout_p.addWidget(self.tab_widget)
 
         # Initialisation des vues
+        self.pre_ana_window()
         self.ana_window()
         self.post_ana_window()
+        self.ana_neo_window()
 
         self.show()
 
@@ -54,6 +56,51 @@ class Haruspex(QMainWindow):
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('Fichier')
         fileMenu.addAction(exitAction)
+
+    ###############################################
+    # Onglet de pré-traitement
+    ###############################################
+
+    def pre_ana_window(self):
+        pre_ana_window_layout = QVBoxLayout(self.pre_ana_view)
+        top_layout = QGridLayout()
+
+        # Sélection du dossier à traiter
+        project_dir_label = QLabel('Dossier du projet', self)
+        project_dir_button = QPushButton('Parcourir', self)
+        project_dir_button.clicked.connect(self.pre_ana_dir_open)
+        self.project_dir_edit = QLineEdit()
+
+        top_layout.addWidget(project_dir_label, 0, 0)
+        top_layout.addWidget(self.project_dir_edit, 0, 1)
+        top_layout.addWidget(project_dir_button, 0, 2)
+
+        # Paramètres
+        form_layout = QFormLayout()
+
+        cut_paragraphs = QCheckBox()
+        form_layout.addRow("&Découpe des paragraphes", cut_paragraphs)
+        close_brackets = QCheckBox()
+        form_layout.addRow("&Fermeture des crochets", close_brackets)
+        sheet_min_size = QLineEdit()
+        sheet_min_size.setPlaceholderText("150")
+        form_layout.addRow("&Taille minimum des fiches (en mots)", sheet_min_size)
+        word_after_last_sheet = QLineEdit()
+        word_after_last_sheet.setPlaceholderText("Conclusion")
+        form_layout.addRow("&Mot présent après la dernière fiche", word_after_last_sheet)
+        author = QLineEdit()
+        author.setPlaceholderText("Bertrand Dumas")
+        form_layout.addRow("&Auteur", author)
+        date_pub = QLineEdit()
+        date_pub.setPlaceholderText("01/01/2000")
+        form_layout.addRow("Date de publication", date_pub)
+
+        pre_ana_window_layout.addLayout(top_layout)
+        pre_ana_window_layout.addLayout(form_layout)
+
+    def pre_ana_dir_open(self):
+        project_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
+        self.project_dir_edit.setText(project_dir)
 
     ###############################################
     # Onglet de configuration et d'execution d'ANA
@@ -187,6 +234,14 @@ class Haruspex(QMainWindow):
     def handleItemPressed(self, item):
         print(item.text())
         self.keywordcontext.setText(item.text())
+
+    ###############################################
+    # Onglet de communication avec Neo4j
+    ###############################################
+
+    def ana_neo_window(self):
+        print("nothing yet")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
