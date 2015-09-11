@@ -1,0 +1,13 @@
+{
+"linkwords_file_path": "french/schema",
+"stopword_file_path": "french/stoplist_Fr.txt",
+"txt_file_path": "/home/matthieu/MEGAsync/IRCCyN/projets_me/Harus/memoireMQ_test/text4ana.txt",
+"bootstrap_file_path": "bootstrap",
+"global_steps": 3,
+"nucleus_nestedsteps": 3,
+"nucleus_threshold": [1,2,2,3],
+"expansion_threshold": 2,
+"expression_threshold": 2,
+"recession_threshold": 2
+}
+
