@@ -4,6 +4,7 @@
 
 import sys, os, subprocess
 import itertools
+import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt,QBasicTimer,pyqtSignal
 from PyQt5.QtGui import QColor, QTextCursor
@@ -62,8 +63,14 @@ class Haruspex(QMainWindow):
     ###############################################
 
     def pre_ana_window(self):
+
+        self.tex_file = ''
+        self.pict_folder = ''
+        self.json_data = {}
+
         pre_ana_window_layout = QVBoxLayout(self.pre_ana_view)
         top_layout = QGridLayout()
+        bottom_layout = QGridLayout()
 
         # Sélection du dossier à traiter
         project_dir_label = QLabel('Dossier du projet', self)
@@ -78,29 +85,66 @@ class Haruspex(QMainWindow):
         # Paramètres
         form_layout = QFormLayout()
 
-        cut_paragraphs = QCheckBox()
-        form_layout.addRow("&Découpe des paragraphes", cut_paragraphs)
-        close_brackets = QCheckBox()
-        form_layout.addRow("&Fermeture des crochets", close_brackets)
-        sheet_min_size = QLineEdit()
-        sheet_min_size.setPlaceholderText("150")
-        form_layout.addRow("&Taille minimum des fiches (en mots)", sheet_min_size)
-        word_after_last_sheet = QLineEdit()
-        word_after_last_sheet.setPlaceholderText("Conclusion")
-        form_layout.addRow("&Mot présent après la dernière fiche", word_after_last_sheet)
-        author = QLineEdit()
-        author.setPlaceholderText("Bertrand Dumas")
-        form_layout.addRow("&Auteur", author)
-        date_pub = QLineEdit()
-        date_pub.setPlaceholderText("01/01/2000")
-        form_layout.addRow("Date de publication", date_pub)
+        self.cut_paragraphs = QCheckBox()
+        form_layout.addRow("&Découpe des paragraphes",self. cut_paragraphs)
+        self.close_brackets = QCheckBox()
+        form_layout.addRow("&Fermeture des crochets", self.close_brackets)
+        self.sheet_min_size = QLineEdit()
+        self.sheet_min_size.setPlaceholderText("150")
+        form_layout.addRow("&Taille minimum des fiches (en mots)", self.sheet_min_size)
+        self.word_after_last_sheet = QLineEdit()
+        self.word_after_last_sheet.setPlaceholderText("Conclusion")
+        form_layout.addRow("&Mot présent après la dernière fiche", self.word_after_last_sheet)
+        self.author = QLineEdit()
+        self.author.setPlaceholderText("Bertrand Dumas")
+        form_layout.addRow("&Auteur", self.author)
+        self.date_pub = QLineEdit()
+        self.date_pub.setPlaceholderText("01/01/2000")
+        form_layout.addRow("Date de publication", self.date_pub)
+
+        validate_button = QPushButton('Enregistrer les paramètres', self)
+        validate_button.clicked.connect(lambda: self.pre_ana_validate(self.project_dir_edit.text()))
+        self.validate_label = QLabel('', self)
+        latex2fiches_button = QPushButton('Créer le fichier', self)
+        latex2fiches_button.clicked.connect(self.pre_ana)
+
+        bottom_layout.addWidget(validate_button, 0, 0)
+        bottom_layout.addWidget(self.validate_label, 0, 1)
+        bottom_layout.addWidget(latex2fiches_button, 1, 0)
 
         pre_ana_window_layout.addLayout(top_layout)
         pre_ana_window_layout.addLayout(form_layout)
+        pre_ana_window_layout.addLayout(bottom_layout)
 
     def pre_ana_dir_open(self):
         project_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
         self.project_dir_edit.setText(project_dir)
+
+        # Récupération du fichier .tex
+        for dirpath, dirnames, files in os.walk(self.project_dir_edit.text()):
+            for name in files:
+                if name.lower().endswith(".tex"):
+                    self.tex_file = os.path.join(dirpath, name)
+            for dirname in dirnames:
+                if dirname.lower().endswith("-img"):
+                    self.pict_folder = os.path.join(dirpath, dirname)
+        self.json_data.update({'project_path': self.project_dir_edit.text(), 'texfile_path': self.tex_file, 'pict_folder': self.pict_folder})
+
+    def pre_ana_validate(self, project_dir):
+        with open(project_dir+"/L2P_config.json", "w") as outfile:
+            params = {'last_word': self.word_after_last_sheet.text(), 'author': self.author.text(), 'publi_date': self.date_pub.text(), 'paragraph_cut': self.cut_paragraphs.isChecked(), 'close_squarebrackets': self.close_brackets.isChecked(), 'mini_size': self.sheet_min_size.text()}
+            self.json_data.update(params)
+            json.dump(self.json_data, outfile, indent=4)
+            self.validate_label.setText("Paramètres enregistrés")
+
+    def pre_ana(self):
+        pre_ana_dir = os.path.join(self.project_dir_edit.text(), os.pardir, "app/LaTeX2pages")
+        print(pre_ana_dir)
+        pre_ana_main_path = os.path.join(pre_ana_dir, 'Latex2pages.py')
+        origWD = os.getcwd() # remember our original working directory
+        os.chdir(pre_ana_dir)
+        subprocess.call(['python3', pre_ana_main_path, self.project_dir_edit.text()])
+        os.chdir(origWD)
 
     ###############################################
     # Onglet de configuration et d'execution d'ANA

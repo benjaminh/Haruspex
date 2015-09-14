@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import os
+import os, sys
 import re
 import indexing
 import CleanLaTeX
 import json
-config = json.loads(open('L2P_config.json').read())
+config = json.loads(open(os.path.join(sys.argv[1],'L2P_config.json')).read())
 etape = 1
 
 Fichier_a_traiter = config['texfile_path']
