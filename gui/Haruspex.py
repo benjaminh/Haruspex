@@ -19,6 +19,9 @@ class Haruspex(QMainWindow):
         self.setWindowTitle('Haruspex')
         self.move(0, 0)
 
+        self.project_directory = ''
+        self.ana_directory = ''
+
         self.create_menu()
 
         # Création du widget principal
@@ -86,7 +89,7 @@ class Haruspex(QMainWindow):
         form_layout = QFormLayout()
 
         self.cut_paragraphs = QCheckBox()
-        form_layout.addRow("&Découpe des paragraphes",self. cut_paragraphs)
+        form_layout.addRow("&Découpe des paragraphes",self.cut_paragraphs)
         self.close_brackets = QCheckBox()
         form_layout.addRow("&Fermeture des crochets", self.close_brackets)
         self.sheet_min_size = QLineEdit()
@@ -130,6 +133,9 @@ class Haruspex(QMainWindow):
                     self.pict_folder = os.path.join(dirpath, dirname)
         self.json_data.update({'project_path': self.project_dir_edit.text(), 'texfile_path': self.tex_file, 'pict_folder': self.pict_folder})
 
+        self.project_directory = self.project_dir_edit.text()
+        self.text4ana_edit.setText(self.project_directory+"/text4ana.txt")
+
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", "w") as outfile:
             params = {'last_word': self.word_after_last_sheet.text(), 'author': self.author.text(), 'publi_date': self.date_pub.text(), 'paragraph_cut': self.cut_paragraphs.isChecked(), 'close_squarebrackets': self.close_brackets.isChecked(), 'mini_size': self.sheet_min_size.text()}
@@ -152,39 +158,103 @@ class Haruspex(QMainWindow):
 
     def ana_window(self):
         ana_window_layout = QVBoxLayout(self.ana_view)
-        top_layout = QGridLayout()
+        top_layout = QHBoxLayout()
+        form_layout = QFormLayout()
+        self.ana_directory = os.path.join(os.getcwd(), os.pardir, "app/ANA")
         # Zone de saisie pour le bootstrap
-        ana_bootstrap_label = QLabel('Saisissez de 1 à 5 mots représentatifs séparés par un \' ; \'', self)
         self.ana_bootstrap = QLineEdit()
-        self.ana_bootstrap_button = QPushButton('Valider', self)
-        bootstrap = self.ana_bootstrap.text()
+        # Curseur de sélection des seuils pour la collecte ANA
 
         # Disposition des outils de sélection
+        # TODO Modifier LaTeX2pages pour que text4ana.txt soit écrit dans le dossier du projet
+        self.text4ana_edit = QLineEdit()
+
         ana_directory_label = QLabel('Répertoire de travail d\'ANA', self)
         self.ana_directory_edit = QLineEdit()
-
+        self.ana_directory_edit.setText(self.ana_directory)
         self.ana_directory = QPushButton('Parcourir', self)
         self.ana_directory.clicked.connect(self.ana_dir_open)
-
+        self.ana_loops = QLineEdit()
+        # Définition des seuils
+        self.ana_thresholds = QSlider(Qt.Horizontal)
+        self.ana_thresholds.valueChanged.connect(self.ana_thresholds_slider)
+        self.ana_thresholds.setMinimum(0)
+        self.ana_thresholds.setMaximum(3)
+        self.ana_thresholds_dict = {}
+        #Bouton d'exécution
         self.ana_exec_button = QPushButton('Lancer ANA', self)
-
         self.ana_exec_button.clicked.connect(self.ana_exec)
 
-        top_layout.addWidget(ana_directory_label, 0, 0)
-        top_layout.addWidget(self.ana_directory_edit, 0, 2)
-        top_layout.addWidget(self.ana_directory, 0, 1)
+        top_layout.addWidget(ana_directory_label)
+        top_layout.addWidget(self.ana_directory_edit)
+        top_layout.addWidget(self.ana_directory)
 
-        top_layout.addWidget(ana_bootstrap_label, 1, 0)
-        top_layout.addWidget(self.ana_bootstrap, 1, 1)
-        top_layout.addWidget(self.ana_bootstrap_button, 1, 2)
+        form_layout.addRow('&Fichier à traiter', self.text4ana_edit)
+        form_layout.addRow('&Saisissez de 1 à 5 mots représentatifs séparés par un \' ; \'', self.ana_bootstrap)
+        form_layout.addRow('&Seuils', self.ana_thresholds)
+        form_layout.addRow('&Nombre de passes', self.ana_loops)
 
-        top_layout.addWidget(self.ana_exec_button, 2, 1)
+        self.ana_validate_button = QPushButton('Enregistrer les paramètres', self)
+        self.ana_validate_button.clicked.connect(lambda: self.ana_config_save(self.ana_bootstrap.text()))
 
         ana_window_layout.addLayout(top_layout)
+        ana_window_layout.addLayout(form_layout)
+        ana_window_layout.addWidget(self.ana_validate_button)
+        ana_window_layout.addWidget(self.ana_exec_button)
 
     def ana_dir_open(self):
         self.ana_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
         self.ana_directory_edit.setText(self.ana_dir)
+        self.ana_directory = self.ana_directory_edit.text()
+
+    def ana_thresholds_slider(self, value):
+        # TODO redéfinir les 4 configs possibles
+        if value == 0:
+            self.ana_thresholds_dict.update(
+            {"nucleus_nestedsteps": 3,
+            "nucleus_threshold": [1,2,2,3],
+            "expansion_threshold": 2,
+            "expression_threshold": 2,
+            "recession_threshold": 2
+            })
+        elif value == 1:
+            self.ana_thresholds_dict.update(
+            {"nucleus_nestedsteps": 3,
+            "nucleus_threshold": [1,2,2,3],
+            "expansion_threshold": 2,
+            "expression_threshold": 2,
+            "recession_threshold": 2
+            })
+        elif value == 2:
+            self.ana_thresholds_dict.update(
+            {"nucleus_nestedsteps": 3,
+            "nucleus_threshold": [1,2,2,3],
+            "expansion_threshold": 2,
+            "expression_threshold": 2,
+            "recession_threshold": 2
+            })
+        elif value == 3:
+            self.ana_thresholds_dict.update(
+            {"nucleus_nestedsteps": 3,
+            "nucleus_threshold": [1,2,2,3],
+            "expansion_threshold": 2,
+            "expression_threshold": 2,
+            "recession_threshold": 2
+            })
+
+    def ana_config_save(self, bootstrap):
+        with open(self.project_directory+"/bootstrap", "w") as outfile:
+            outfile.write(bootstrap)
+        with open(self.project_directory+"/ana_config.json", "w") as outfile:
+            params = {
+            "linkwords_file_path": self.ana_directory + "/french/schema",
+            "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
+            "txt_file_path": self.project_directory + "/text4ana.txt",
+            "bootstrap_file_path": "bootstrap",
+            "global_steps": self.ana_loops.text()
+            }.update(self.ana_thresholds_dict)
+            json.dump(params, outfile, indent=4)
+            self.validate_label.setText("Paramètres enregistrés")
 
     def ana_exec(self):
         ana_main = self.ana_dir
@@ -211,13 +281,29 @@ class Haruspex(QMainWindow):
         self.ana_display_button = QPushButton('Afficher les résultats', self)
         self.ana_display_button.clicked.connect(self.ana_display_results)
 
-
         top_layout.addWidget(ana_output_label, 0, 0)
-        top_layout.addWidget(self.ana_output_edit, 0, 2)
-        top_layout.addWidget(self.ana_output, 0, 1)
+        top_layout.addWidget(self.ana_output_edit, 0, 1)
+        top_layout.addWidget(self.ana_output, 0, 2)
         top_layout.addWidget(self.ana_display_button, 1, 1)
 
         post_ana_layout.addLayout(top_layout)
+
+
+        # Créer une scroll area
+        self.results_layout = QHBoxLayout()
+        self.scroll = QScrollArea()
+        self.table = QTableWidget()
+        self.table.setRowCount(0)
+        self.table.setColumnCount(6)
+
+
+        # Création d'une fenêtre d'affichage du contexte
+        self.keywordcontext = QTextEdit()
+        self.keywordcontext.setReadOnly(True)
+
+        self.results_layout.addWidget(self.scroll)
+        self.results_layout.addWidget(self.keywordcontext)
+        post_ana_layout.addLayout(self.results_layout)
 
     def ana_output_open(self):
         if hasattr(self, 'ana_dir'):
@@ -229,16 +315,6 @@ class Haruspex(QMainWindow):
 
 
     def ana_display_results(self):
-        # Créer une scroll area
-        self.results_layout = QHBoxLayout()
-        self.scroll = QScrollArea()
-        self.table = QTableWidget()
-        self.table.setRowCount(0)
-        self.table.setColumnCount(6)
-
-        # Création d'une fenêtre d'affichage du contexte
-        self.keywordcontext = QTextEdit()
-        self.keywordcontext.setReadOnly(True)
 
         filepath = self.ana_results
         if filepath:
@@ -264,10 +340,6 @@ class Haruspex(QMainWindow):
                 self.scroll.setWidget(self.table)
                 self.scroll.setWidgetResizable(True)
                 self.scroll.ensureWidgetVisible(self.table)
-
-                self.results_layout.addWidget(self.scroll)
-                self.results_layout.addWidget(self.keywordcontext)
-                self.layout_p.addLayout(self.results_layout)
 
     def handleItemClicked(self, item):
         if item.checkState() == Qt.Unchecked:
