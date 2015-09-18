@@ -13,6 +13,7 @@ ch: changed keyword by user
 mk: make a new keyword exists in text
 '''
 import csv
+import json
 import re
 import glob
 import os
@@ -33,23 +34,26 @@ def post_supervisedkeys():
                 remove_keys.add(row[1])
     return change_keys, make_keys, remove_keys
 
-def create_keyword_page(keypage_number, keywords):
-    keypage_name = 'output/keyword_pages/page' + page_number + '.key'
-    with open(keypage_name, 'w', encoding = 'utf8') as keypage:
-        if keywords != []:
-            for keyword in keywords:
-                keypage.write(keyword + '\n')
+def clean_thedicts():
+    pages_name = glob.glob("pages/fiche*.txt")
+    # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
+    pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
+    ghosts = list(set(dict_bypage) - set(pages_number))
+    dict_bypage.pop(ghost, None) for ghost in ghosts
+    for keyword, pages in dict_bykey.items():
+        pages.pop(ghost, None) for ghost in ghosts
 
-#######################################################################
-#######################################################################
-## functions to add keywords to keypages, if the user added new keywords
-def add_keyword2keypage(page_number, keywords):
-    keypage_name = 'output/keyword_pages/page' + page_number + '.key'
-    with open(keypage_name, 'a', encoding = 'utf8') as keypage:
-        if keywords != []:
-            for keyword in keywords:
-                keypage.write(keyword + '\n')
+#TODO finir cette fonction
+def inherit_thedicts():
+    pages_name = glob.glob("pages/fiche*.txt")
+    # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
+    pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
+    ghosts = list(set(dict_bypage) - set(pages_number))
+    for ghost in ghosts:
+        if ghost != '0_0_0':
 
+
+#build a flex regex to find the new keyword in the pages
 def build_newkeys_regex(make_keys):
     newkeys_regex = {}
     for key in make_keys:
@@ -77,15 +81,14 @@ def check4keyword_inpage(page_name, newkeys_regex):
     return keywords #list of "user_defined_keys" found in a page
 
 def make_keyword(newkeys_regex):
-    pages_name = glob.glob("pages/*.txt")
+    pages_name = glob.glob("pages/fiche*.txt")
     for page_name in pages_name:
-        if 'fiche' in page_name: #check if the word 'fiche' appears in the file name to avoid catching the 'references' and 'pictures' files
-            keywords_inpage = check4keyword_inpage(page_name, newkeys_regex)
-            if keywords_inpage != []:
-                page_number = re.findall(r'([\_|\d]+)', page_name)
-                add_keyword2keypage(page_number, keywords_inpage)
-                dict_bypage[page_number].extend(keywords_inpage) # add the new found keywords to the existing dict
-                [dict_bykey[keyword].append(page_number) for keyword in keywords_inpage]
+        keywords_inpage = check4keyword_inpage(page_name, newkeys_regex)
+        if keywords_inpage != []:
+            page_number = re.findall(r'([\_|\d]+)', page_name)
+            add_keyword2keypage(page_number, keywords_inpage)
+            dict_bypage[page_number].extend(keywords_inpage) # add the new found keywords to the existing dict
+            [dict_bykey[keyword].append(page_number) for keyword in keywords_inpage]
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
@@ -93,12 +96,11 @@ def make_keyword(newkeys_regex):
 def tagging_pages(dict_occ_ref):
     global dict_bypage = defaultdict(list)
     global dict_bykey = defaultdict(list)
+
     change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
-    ##build a flex regex to find the new keyword in the pages
-    if not os.path.exists('output/keyword_pages/'):
-        os.makedirs('output/keyword_pages/')
-    page_number = '0.0.0'
-    #TODO verifier l'ordre de lecture dans le dico - fait
+    # if not os.path.exists('output/keyword_pages/'):
+    #     os.makedirs('output/keyword_pages/')
+    page_number = '0_0_0'
     #TODO verifier que la fonction sorted fonctionne bien.
     for pos in sorted(dict_occ_ref):
         value = dict_occ_ref[pos]
@@ -120,12 +122,17 @@ def tagging_pages(dict_occ_ref):
     if make_keys:
         newkeys_regex = build_newkeys_regex(make_keys)
         make_keyword(newkeys_regex)
+    #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
+    # if inherit_keys:
+    #     inherit_thedicts()
+    # else:
+    clean_thedicts()
 
-#TODO think about the usefulness of the files .key if it' only display or if the user can handwrite a new keyword in it.
-#also if its about adding new keyword, maybe the GUI is more usefull to do this (than opening a file and write manualy)
-#so this can be done without a file (adding new keyword -> the GUI also can provide access to the dict_bypage and dict_bykey?)
-#TODO clean the problem of .key file related to pages that haven't been created (because too few words)
-#choose option? enable user to choose an option?
+    with open('output/where_keyword.json', 'w') as json_wherekey:
+        json.dump(dict_bykey, json_wherekey, ensure_ascii=False, indent=4)
+    with open('output/what_inpage.json', 'w') as json_whatinpage:
+        json.dump(dict_bypage, json_whatinpage, ensure_ascii=False, indent=4)
+
 
 def idf():
     idf = {}
