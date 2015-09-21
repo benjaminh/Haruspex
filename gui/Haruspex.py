@@ -6,7 +6,7 @@ import sys, os, subprocess
 import itertools
 import json
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt,QBasicTimer,pyqtSignal
+from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QTextCursor
 
 
@@ -145,7 +145,6 @@ class Haruspex(QMainWindow):
 
     def pre_ana(self):
         pre_ana_dir = os.path.join(self.project_dir_edit.text(), os.pardir, "app/LaTeX2pages")
-        print(pre_ana_dir)
         pre_ana_main_path = os.path.join(pre_ana_dir, 'Latex2pages.py')
         origWD = os.getcwd() # remember our original working directory
         os.chdir(pre_ana_dir)
@@ -357,9 +356,3 @@ class Haruspex(QMainWindow):
 
     def ana_neo_window(self):
         print("nothing yet")
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    haruspex = Haruspex()
-    app.exec()
