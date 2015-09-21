@@ -8,6 +8,7 @@ import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QTextCursor, QIntValidator
+import pprint
 
 
 class Haruspex(QMainWindow):
@@ -137,6 +138,8 @@ class Haruspex(QMainWindow):
 
         self.project_directory = self.project_dir_edit.text()
         self.text4ana_edit.setText(self.project_directory+"/text4ana.txt")
+
+        self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", "w") as outfile:
@@ -282,6 +285,8 @@ class Haruspex(QMainWindow):
     def post_ana_window(self):
         post_ana_layout = QVBoxLayout(self.ana_results_view)
         top_layout = QGridLayout()
+        bottom_layout = QGridLayout()
+        self.ana_results = ''
 
         ana_output_label = QLabel('Fichier de résultats d\'ANA', self)
         self.ana_output_edit = QLineEdit()
@@ -312,9 +317,17 @@ class Haruspex(QMainWindow):
         self.keywordcontext = QTextEdit()
         self.keywordcontext.setReadOnly(True)
 
+        # Bouton de validation
+        self.ana_results_save_button = QPushButton('Enregistrer', self)
+        self.ana_results_save_button.clicked.connect(self.ana_results_save)
+        self.ana_results_saved = QLabel(self)
+
         self.results_layout.addWidget(self.scroll)
         self.results_layout.addWidget(self.keywordcontext)
+        bottom_layout.addWidget(self.ana_results_save_button, 0, 0)
+        bottom_layout.addWidget(self.ana_results_saved, 0, 1)
         post_ana_layout.addLayout(self.results_layout)
+        post_ana_layout.addLayout(bottom_layout)
 
     def ana_output_open(self):
         if hasattr(self, 'ana_dir'):
@@ -326,16 +339,19 @@ class Haruspex(QMainWindow):
 
 
     def ana_display_results(self):
+        if self.ana_results != '':
+            filepath = self.ana_results
+        else:
+            filepath = self.ana_output_edit.text()
 
-        filepath = self.ana_results
         if filepath:
             with open(filepath) as file:
+                self.data = json.load(file)
                 i = 0
                 j = 0
                 self.table.insertRow(self.table.rowCount())
-                for line in itertools.islice(file, 3, None):
-                    keyword = line.split(':')[1].rstrip('\n').strip()
-                    keyword_box = QTableWidgetItem(keyword)
+                for key, value in self.data.items():
+                    keyword_box = QTableWidgetItem(key)
                     keyword_box.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
                     keyword_box.setCheckState(Qt.Checked)
                     if j > 5 :
@@ -359,8 +375,21 @@ class Haruspex(QMainWindow):
             item.setBackground(QColor(255,255,255))
 
     def handleItemPressed(self, item):
-        print(item.text())
-        self.keywordcontext.setText(item.text())
+        key = item.text()
+        html_text = '<h1>'+key+'</h1>'
+        for sentence in self.data[key]:
+            html_text += '<p>'+sentence+'</p>'
+        self.keywordcontext.setHtml(html_text)
+
+    def ana_results_save(self):
+        self.table.selectAll()
+        items = self.table.selectedItems()
+        #TODO gérer la modification du texte
+        final_keywords = { item.text(): self.data[item.text()] for item in items if item.checkState() == Qt.Checked }
+        with open(self.project_directory+"/final_keywords.json", "w") as outfile:
+            json.dump(final_keywords, outfile, indent=4)
+            outfile.close()
+        self.ana_results_saved.setText('Résultats sauvegardés')
 
     ###############################################
     # Onglet de communication avec Neo4j
