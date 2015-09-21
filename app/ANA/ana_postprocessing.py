@@ -17,7 +17,7 @@ import json
 import re
 import glob
 import os
-from collections import Counter
+from collections import Counter, defaultdict
 
 def post_supervisedkeys():
     with open('user_supervised_keywords.csv', 'rt', encoding='utf8') as keywordFile:
@@ -39,9 +39,11 @@ def clean_thedicts():
     # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
     pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
     ghosts = list(set(dict_bypage) - set(pages_number))
-    dict_bypage.pop(ghost, None) for ghost in ghosts
-    for keyword, pages in dict_bykey.items():
-        pages.pop(ghost, None) for ghost in ghosts
+    for ghost in ghosts:
+        del dict_bypage[ghost]
+        for keyword, pages in dict_bykey.items():
+            if ghost in pages:
+                pages.remove(ghost)
 
 #TODO finir cette fonction
 def inherit_thedicts():
@@ -49,9 +51,8 @@ def inherit_thedicts():
     # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
     pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
     ghosts = list(set(dict_bypage) - set(pages_number))
-    for ghost in ghosts:
-        if ghost != '0_0_0':
-
+    #for ghost in ghosts:
+    #    if ghost != '0_0_0':
 
 #build a flex regex to find the new keyword in the pages
 def build_newkeys_regex(make_keys):
@@ -86,16 +87,18 @@ def make_keyword(newkeys_regex):
         keywords_inpage = check4keyword_inpage(page_name, newkeys_regex)
         if keywords_inpage != []:
             page_number = re.findall(r'([\_|\d]+)', page_name)
-            add_keyword2keypage(page_number, keywords_inpage)
             dict_bypage[page_number].extend(keywords_inpage) # add the new found keywords to the existing dict
+            # TODO FIX TypeError: unhashable type: 'list' on line above
             [dict_bykey[keyword].append(page_number) for keyword in keywords_inpage]
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
 
 def tagging_pages(dict_occ_ref):
-    global dict_bypage = defaultdict(list)
-    global dict_bykey = defaultdict(list)
+    global dict_bypage
+    dict_bypage = defaultdict(list)
+    global dict_bykey
+    dict_bykey = defaultdict(list)
 
     change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
     # if not os.path.exists('output/keyword_pages/'):
@@ -117,11 +120,6 @@ def tagging_pages(dict_occ_ref):
                 dict_bypage[page_number].append(keyword) #page_number:keywords in page
                 dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
 
-    for page_number, keywords in dict_bypage.items():
-        create_keyword_page(page_number, keywords)
-    if make_keys:
-        newkeys_regex = build_newkeys_regex(make_keys)
-        make_keyword(newkeys_regex)
     #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
     # if inherit_keys:
     #     inherit_thedicts()

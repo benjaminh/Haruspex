@@ -9,7 +9,7 @@ import os
 import ntpath
 import json
 import ana_postprocessing
-config = json.loads(open('ana_config.json').read())
+config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
 
 #FICHIERS D'ENTREE#####################################################
 # linkwords_file_path = config['entries']['linkwords_file_path']
@@ -45,14 +45,13 @@ dict_occ_ref = ana_useful.text2occ(txt_file_path)
 # nucleus_threshold = [3,5,5,10]
 # nucleus_threshold = [2,4,4,6]
 nucleus_threshold = config['nucleus_threshold']
-print(nucleus_threshold)
-expansion_threshold = config['expansion_threshold']
-expression_threshold = config['expression_threshold']
-recession_threshold = config['recession_threshold']
+expansion_threshold = int(config['expansion_threshold'])
+expression_threshold = int(config['expression_threshold'])
+recession_threshold = int(config['recession_threshold'])
 
 #STEPS########################################################################
-global_steps = config['global_steps']
-nucleus_steps = config['nucleus_nestedsteps']
+global_steps = int(config['global_steps'])
+nucleus_steps = int(config['nucleus_nestedsteps'])
 
 
 with open(log_file_path, 'w', encoding = 'utf8') as logfile:

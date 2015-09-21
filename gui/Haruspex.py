@@ -7,7 +7,7 @@ import itertools
 import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QTextCursor
+from PyQt5.QtGui import QColor, QTextCursor, QIntValidator
 
 
 class Haruspex(QMainWindow):
@@ -94,6 +94,8 @@ class Haruspex(QMainWindow):
         form_layout.addRow("&Fermeture des crochets", self.close_brackets)
         self.sheet_min_size = QLineEdit()
         self.sheet_min_size.setPlaceholderText("150")
+        size_validator = QIntValidator()
+        self.sheet_min_size.setValidator(size_validator)
         form_layout.addRow("&Taille minimum des fiches (en mots)", self.sheet_min_size)
         self.word_after_last_sheet = QLineEdit()
         self.word_after_last_sheet.setPlaceholderText("Conclusion")
@@ -130,7 +132,7 @@ class Haruspex(QMainWindow):
                     self.tex_file = os.path.join(dirpath, name)
             for dirname in dirnames:
                 if dirname.lower().endswith("-img"):
-                    self.pict_folder = os.path.join(dirpath, dirname)
+                    self.pict_folder = dirname
         self.json_data.update({'project_path': self.project_dir_edit.text(), 'texfile_path': self.tex_file, 'pict_folder': self.pict_folder})
 
         self.project_directory = self.project_dir_edit.text()
@@ -138,7 +140,12 @@ class Haruspex(QMainWindow):
 
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", "w") as outfile:
-            params = {'last_word': self.word_after_last_sheet.text(), 'author': self.author.text(), 'publi_date': self.date_pub.text(), 'paragraph_cut': self.cut_paragraphs.isChecked(), 'close_squarebrackets': self.close_brackets.isChecked(), 'mini_size': self.sheet_min_size.text()}
+            params = {'last_word': self.word_after_last_sheet.text(),
+            'author': self.author.text(),
+            'publi_date': self.date_pub.text(),
+            'paragraph_cut': self.cut_paragraphs.isChecked(),
+            'close_squarebrackets': self.close_brackets.isChecked(),
+            'mini_size': int(self.sheet_min_size.text())}
             self.json_data.update(params)
             json.dump(self.json_data, outfile, indent=4)
             self.validate_label.setText("Paramètres enregistrés")
@@ -159,7 +166,7 @@ class Haruspex(QMainWindow):
         ana_window_layout = QVBoxLayout(self.ana_view)
         top_layout = QHBoxLayout()
         form_layout = QFormLayout()
-        self.ana_directory = os.path.join(os.getcwd(), os.pardir, "app/ANA")
+        self.ana_directory = os.path.join(os.getcwd(), "app/ANA")
         # Zone de saisie pour le bootstrap
         self.ana_bootstrap = QLineEdit()
         # Curseur de sélection des seuils pour la collecte ANA
@@ -171,9 +178,13 @@ class Haruspex(QMainWindow):
         ana_directory_label = QLabel('Répertoire de travail d\'ANA', self)
         self.ana_directory_edit = QLineEdit()
         self.ana_directory_edit.setText(self.ana_directory)
-        self.ana_directory = QPushButton('Parcourir', self)
-        self.ana_directory.clicked.connect(self.ana_dir_open)
+        self.ana_directory_button = QPushButton('Parcourir', self)
+        self.ana_directory_button.clicked.connect(self.ana_dir_open)
         self.ana_loops = QLineEdit()
+        loop_validator = QIntValidator()
+        self.ana_loops.setValidator(loop_validator)
+
+
         # Définition des seuils
         self.ana_thresholds = QSlider(Qt.Horizontal)
         self.ana_thresholds.valueChanged.connect(self.ana_thresholds_slider)
@@ -186,7 +197,7 @@ class Haruspex(QMainWindow):
 
         top_layout.addWidget(ana_directory_label)
         top_layout.addWidget(self.ana_directory_edit)
-        top_layout.addWidget(self.ana_directory)
+        top_layout.addWidget(self.ana_directory_button)
 
         form_layout.addRow('&Fichier à traiter', self.text4ana_edit)
         form_layout.addRow('&Saisissez de 1 à 5 mots représentatifs séparés par un \' ; \'', self.ana_bootstrap)
@@ -244,23 +255,24 @@ class Haruspex(QMainWindow):
     def ana_config_save(self, bootstrap):
         with open(self.project_directory+"/bootstrap", "w") as outfile:
             outfile.write(bootstrap)
+            outfile.close()
         with open(self.project_directory+"/ana_config.json", "w") as outfile:
-            params = {
-            "linkwords_file_path": self.ana_directory + "/french/schema",
+            self.ana_config_json = {"linkwords_file_path": self.ana_directory + "/french/schema",
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
             "txt_file_path": self.project_directory + "/text4ana.txt",
             "bootstrap_file_path": "bootstrap",
-            "global_steps": self.ana_loops.text()
-            }.update(self.ana_thresholds_dict)
-            json.dump(params, outfile, indent=4)
+            "global_steps": int(self.ana_loops.text())}
+            self.ana_config_json.update(self.ana_thresholds_dict)
+            json.dump(self.ana_config_json, outfile, indent=4)
             self.validate_label.setText("Paramètres enregistrés")
+            outfile.close()
 
     def ana_exec(self):
-        ana_main = self.ana_dir
+        ana_main = self.ana_directory
         ana_main_path = os.path.join(ana_main, 'ana_main.py')
         origWD = os.getcwd() # remember our original working directory
         os.chdir(ana_main)
-        subprocess.call(['python3', ana_main_path])
+        subprocess.call(['python3', ana_main_path, self.project_dir_edit.text()])
         os.chdir(origWD)
 
     ###############################################
