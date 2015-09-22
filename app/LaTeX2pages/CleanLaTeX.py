@@ -137,6 +137,7 @@ def Clean(OrigineFile, step):
 				ligne = re.sub(r"{\\textgreater}", "", ligne)
 				ligne = re.sub(r"{\\textquotedbl}", "", ligne)
 				ligne = re.sub(r'{\\dots}', '...', ligne)
+				ligne = re.sub(r'ʽ|՚|‘|‛|‵|ʾ|\'|ʿ|ʼ|΄|´|´|′|Ꞌ|ꞌ|ʹ|ˈ|‘|’|ʽ|ʼ|’', '’', ligne)
 				ligne = re.sub(r'{\oe}', 'œ', ligne)
 				ligne = re.sub(r"{\\textless}", "", ligne)
 				ligne = re.sub(r"^\\\w*(\{\}|[\s\n]|\{[^\w\n]+\})", "", ligne)

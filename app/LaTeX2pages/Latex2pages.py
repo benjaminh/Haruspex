@@ -7,6 +7,8 @@ import indexing
 import CleanLaTeX
 import json
 config = json.loads(open(os.path.join(sys.argv[1],'L2P_config.json')).read())
+# pour faire tourner en ligne de commande
+# config = json.loads(open('L2P_config.json').read())
 etape = 1
 
 Fichier_a_traiter = config['texfile_path']
