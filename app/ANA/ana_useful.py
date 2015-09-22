@@ -112,7 +112,7 @@ def text2occ(txt_file_path):
         #texte = re.sub('-', '_', texte) # pour éviter de perdre les traits d'union '-'
         # separator = re.compile(r'\W+') #attention selon les distrib, W+ peut catcher les lettre accentuées comme des "non lettre"
         # words = re.split(separator, text)
-        words = re.findall(r'(\w+[\’|\']?|[.,!?;])(?siu)', text)
+        words = re.findall(r'(\w+[’|\']?|[.,!?;])(?siu)', text)
         for word in words:
             lower_word = word.lower()
             i += 1

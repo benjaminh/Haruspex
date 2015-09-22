@@ -12,7 +12,6 @@ rm: removed keyword by user
 ch: changed keyword by user
 mk: make a new keyword exists in text
 '''
-import csv
 import json
 import re
 import glob
@@ -20,19 +19,20 @@ import os
 from collections import Counter, defaultdict
 
 def post_supervisedkeys():
-    with open('user_supervised_keywords.csv', 'rt', encoding='utf8') as keywordFile:
-        Keyfile = csv.reader(keywordFile, delimiter= ';', quotechar='"')
+    modifs = json.loads(open('output/final_keywords.json').read())
         change_keys = {}
         make_keys = set() # a set is better in case of ducplicates and provides a faster access to check
         remove_keys = set()
-        for row in Keyfile:
-            if row[0] == 'ch':
-                change_keys[row[1]] = row[2]
-            if row[0] == 'mk':
-                make_keys.add(row[2])
-            if row[0] == 'rm':
-                remove_keys.add(row[1])
+        for key in modifs:
+            if key['modification'] == 'modifie':
+                if '\\' not in key[nouveau_mot_cle]:
+                    change_keys[key] = key[nouveau_mot_cle]
+            if key['modification'] == 'nouveau':
+                make_keys.add(key)
+            if key['modification'] == 'supprime':
+                remove_keys.add(key)
     return change_keys, make_keys, remove_keys
+
 
 def clean_thedicts():
     pages_name = glob.glob("pages/fiche*.txt")
@@ -45,14 +45,39 @@ def clean_thedicts():
             if ghost in pages:
                 pages.remove(ghost)
 
-#TODO finir cette fonction
+
 def inherit_thedicts():
     pages_name = glob.glob("pages/fiche*.txt")
     # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
     pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
     ghosts = list(set(dict_bypage) - set(pages_number))
-    #for ghost in ghosts:
-    #    if ghost != '0_0_0':
+    ghosts.pop('0_0_0')
+    for ghost in ghosts:
+        childs = set()
+            parent1 = re.findall(r'(\d)(?=_0_0)', ghost)
+            parent2child(parent1[0])
+            if parent1:
+                parent1 = parent1[0]
+                parent1keys = dict_bykey[parent1 + '_0_0'].pop()
+                child1_regex = parent1 + '\d_\d'
+                for page in dict_bypage:
+                    if re.match(child_regex, page):
+                        dict_bypage[page].extend(parent1keys)
+                        childs.append(page)
+                for key in parent1keys:
+                    dict_bykey[key].extend(childs)
+
+            parent2 = re.findall(r'(\d_[^0])(?=_0)', ghost)
+            if parent2:
+                parent2 = parent2[0]
+                parent2keys = dict_bykey[parent2 + '_0'].pop()
+                child2_regex = parent2 + '_\d'
+                for page in dict_bypage:
+                    if re.match(child2_regex, page):
+                        dict_bypage[page].extend(parent2keys)
+                        childs.append(page)
+                for key in parent1keys:
+                    dict_bykey[key].extend(childs)
 
 #build a flex regex to find the new keyword in the pages
 def build_newkeys_regex(make_keys):
@@ -88,21 +113,19 @@ def make_keyword(newkeys_regex):
         if keywords_inpage != []:
             page_number = re.findall(r'([\_|\d]+)', page_name)
             dict_bypage[page_number].extend(keywords_inpage) # add the new found keywords to the existing dict
-            # TODO FIX TypeError: unhashable type: 'list' on line above
-            [dict_bykey[keyword].append(page_number) for keyword in keywords_inpage]
+            for keyword in keywords_inpage:
+                dict_bykey[keyword].append(page_number)
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
 
-def tagging_pages(dict_occ_ref):
+def tagging_pages(dict_occ_ref, inherit_keys = False):
     global dict_bypage
     dict_bypage = defaultdict(list)
     global dict_bykey
     dict_bykey = defaultdict(list)
 
     change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
-    # if not os.path.exists('output/keyword_pages/'):
-    #     os.makedirs('output/keyword_pages/')
     page_number = '0_0_0'
     #TODO verifier que la fonction sorted fonctionne bien.
     for pos in sorted(dict_occ_ref):
@@ -121,38 +144,12 @@ def tagging_pages(dict_occ_ref):
                 dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
 
     #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
-    # if inherit_keys:
-    #     inherit_thedicts()
-    # else:
-    clean_thedicts()
+    if inherit_keys:
+        inherit_thedicts()
+    else:
+        clean_thedicts()
 
     with open('output/where_keyword.json', 'w') as json_wherekey:
         json.dump(dict_bykey, json_wherekey, ensure_ascii=False, indent=4)
     with open('output/what_inpage.json', 'w') as json_whatinpage:
         json.dump(dict_bypage, json_whatinpage, ensure_ascii=False, indent=4)
-
-
-def idf():
-    idf = {}
-    nb_pages = len(dict_bypage) #how many pages there are
-    for keyword in dict_bykey:
-        idf = math.log10(nb_pages/len(set(dict_bykey[keyword])))
-        idf[keyword] = idf
-    return idf
-
-def build_links_TFiDF():
-    idf = idf()
-    done = set()
-    with open('links.csv') as linksfile:
-        for key in dict_bykey: #each key in a page will be a link
-            nb_occurrences_of_key_inpage = Counter(dict_bykey[key]) #return smth like {'pagenumber1': 2 ; 'pagenumber5': 3 ; 'pagenumberx': y}
-            for page_number in nb_occurrences_of_key_inpage:
-                for p_num in nb_occurrences_of_key_inpage:
-                    linked = str(page_number + '@' + p_num)
-                    deknil = str(p_num + '@' + page_number)
-                    if (page_number != p_num and deknil not in done):
-                        tf = nb_occurrences_of_key_inpage[p_num] + nb_occurrences_of_key_inpage[page_number]
-                        tfidf = tf*idf[key]
-                        done.append(linked)
-                        link = linked + key + str(tfidf)
-                        linksfile.write(link)
