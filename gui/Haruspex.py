@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# encoding: utf-8
 
 
 import sys, os, subprocess
@@ -8,7 +8,6 @@ import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QTextCursor, QIntValidator
-import pprint
 
 
 class Haruspex(QMainWindow):
@@ -142,7 +141,7 @@ class Haruspex(QMainWindow):
         self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
     def pre_ana_validate(self, project_dir):
-        with open(project_dir+"/L2P_config.json", "w") as outfile:
+        with open(project_dir+"/L2P_config.json", 'w', encoding = 'utf-8') as outfile:
             params = {'last_word': self.word_after_last_sheet.text(),
             'author': self.author.text(),
             'publi_date': self.date_pub.text(),
@@ -150,7 +149,7 @@ class Haruspex(QMainWindow):
             'close_squarebrackets': self.close_brackets.isChecked(),
             'mini_size': int(self.sheet_min_size.text())}
             self.json_data.update(params)
-            json.dump(self.json_data, outfile, indent=4)
+            json.dump(self.json_data, outfile, ensure_ascii=False, indent=4)
             self.validate_label.setText("Paramètres enregistrés")
 
     def pre_ana(self):
@@ -256,17 +255,17 @@ class Haruspex(QMainWindow):
             })
 
     def ana_config_save(self, bootstrap):
-        with open(self.project_directory+"/bootstrap", "w") as outfile:
+        with open(self.project_directory+"/bootstrap", "w", encoding = 'utf8') as outfile:
             outfile.write(bootstrap)
             outfile.close()
-        with open(self.project_directory+"/ana_config.json", "w") as outfile:
+        with open(self.project_directory+"/ana_config.json", "w", encoding = 'utf8') as outfile:
             self.ana_config_json = {"linkwords_file_path": self.ana_directory + "/french/schema",
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
             "txt_file_path": self.project_directory + "/text4ana.txt",
             "bootstrap_file_path": "bootstrap",
             "global_steps": int(self.ana_loops.text())}
             self.ana_config_json.update(self.ana_thresholds_dict)
-            json.dump(self.ana_config_json, outfile, indent=4)
+            json.dump(self.ana_config_json, outfile, ensure_ascii=False, indent=4)
             self.validate_label.setText("Paramètres enregistrés")
             outfile.close()
 
@@ -339,6 +338,7 @@ class Haruspex(QMainWindow):
 
 
     def ana_display_results(self):
+        self.equivalence_table = {}
         if self.ana_results != '':
             filepath = self.ana_results
         else:
@@ -350,14 +350,17 @@ class Haruspex(QMainWindow):
                 i = 0
                 j = 0
                 self.table.insertRow(self.table.rowCount())
-                for key, value in self.data.items():
+                for key, value in sorted(self.data.items()):
                     keyword_box = QTableWidgetItem(key)
                     keyword_box.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
                     keyword_box.setCheckState(Qt.Checked)
                     if j > 5 :
+                        i += 1
                         self.table.insertRow(i)
                         j = 0
                     self.table.setItem(i, j, keyword_box)
+                    equiv_key = '('+str(i)+','+str(j)+')'
+                    self.equivalence_table[equiv_key] = key
                     j += 1
                 file.close()
 
@@ -375,8 +378,11 @@ class Haruspex(QMainWindow):
             item.setBackground(QColor(255,255,255))
 
     def handleItemPressed(self, item):
-        key = item.text()
-        html_text = '<h1>'+key+'</h1>'
+        item_row = item.row()
+        item_column = item.column()
+        equiv_key = '('+str(item_row)+','+str(item_column)+')'
+        key = self.equivalence_table[equiv_key]
+        html_text = '<h1>'+item.text()+'</h1>'
         for sentence in self.data[key]:
             html_text += '<p>'+sentence+'</p>'
         self.keywordcontext.setHtml(html_text)
@@ -384,10 +390,24 @@ class Haruspex(QMainWindow):
     def ana_results_save(self):
         self.table.selectAll()
         items = self.table.selectedItems()
+        deleted_keywords = {}
+        modified_keywords = {}
         #TODO gérer la modification du texte
-        final_keywords = { item.text(): self.data[item.text()] for item in items if item.checkState() == Qt.Checked }
-        with open(self.project_directory+"/final_keywords.json", "w") as outfile:
-            json.dump(final_keywords, outfile, indent=4)
+        for item in items:
+            item_row = item.row()
+            item_column = item.column()
+            equiv_key = '('+str(item_row)+','+str(item_column)+')'
+            key = self.equivalence_table[equiv_key]
+            if item.checkState() == Qt.Unchecked:
+                # Mots-clés décochés
+                deleted_keywords[key] = {'modification':'supprime'}
+            elif item.checkState() == Qt.Checked and item.text() != key:
+                #Mots-cles modifiés
+                modified_keywords[key] = {'modification':'modifie', 'nouveau_mot_cle':item.text()}
+        modified_keywords.update(deleted_keywords)
+
+        with open(self.project_directory+"/final_keywords.json", 'w', encoding = 'utf8') as outfile:
+            json.dump(modified_keywords, outfile, ensure_ascii=False, indent=4)
             outfile.close()
         self.ana_results_saved.setText('Résultats sauvegardés')
 
