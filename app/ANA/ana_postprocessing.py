@@ -50,35 +50,45 @@ def inherit_thedicts():
     pages_name = glob.glob("pages/fiche*.txt")
     # pages_number = [re.findall(r'([\_|\d]+)', page_name) for page_name in pages_name]
     pages_number = list(map(lambda page_name: re.findall(r'([\_|\d]+)', page_name)[0], pages_name))
-    ghosts = list(set(dict_bypage) - set(pages_number))
-    ghosts.pop('0_0_0')
+    ghosts = sorted(list(set(dict_bypage.keys()) - set(pages_number)), reverse = True)
     for ghost in ghosts:
         childs = set()
-        parent1 = re.findall(r'(\d)(?=_0_0)', ghost)
-        parent2child(parent1[0])
-        if parent1:
-            parent1 = parent1[0]
-            parent1keys = dict_bykey[parent1 + '_0_0'].pop()
-            child1_regex = parent1 + '\d_\d'
-            for page in dict_bypage:
-                if re.match(child_regex, page):
-                    dict_bypage[page].extend(parent1keys)
-                    childs.append(page)
-            for key in parent1keys:
-                dict_bykey[key].extend(childs)
-
-        parent2 = re.findall(r'(\d_[^0])(?=_0)', ghost)
+        parent2 = re.findall(r'([^0]+)(?=_0$)', ghost)
         if parent2:
             parent2 = parent2[0]
-            parent2keys = dict_bykey[parent2 + '_0'].pop()
+            parent2keys = dict_bypage[parent2 + '_0']
             child2_regex = parent2 + '_\d'
             for page in dict_bypage:
                 if re.match(child2_regex, page):
                     dict_bypage[page].extend(parent2keys)
-                    childs.append(page)
+                    childs.add(page)
             for key in parent1keys:
                 dict_bykey[key].extend(childs)
 
+        parent1 = re.findall(r'([^0]+)(?=_0_0$)', ghost)
+        if parent1:
+            parent1 = parent1[0]
+            parent1keys = dict_bypage[parent1 + '_0_0']
+            child1_regex = parent1 + '_\d_\d'
+            for page in dict_bypage:
+                if re.match(child1_regex, page) and page != (parent1 + '_0_0'):
+                    dict_bypage[page].extend(parent1keys)
+                    childs.add(page)
+            for key in parent1keys:
+                dict_bykey[key].extend(childs)
+
+        parent0 = re.findall(r'([^0]+)(?=_0_0_0$)', ghost)
+        if parent0:
+            parent0 = parent0[0]
+            parent0keys = dict_bypage[parent0 + '_0_0_0']
+            child0_regex = parent0 + '_\d_\d_\d'
+            for page in dict_bypage:
+                if re.match(child0_regex, page):
+                    dict_bypage[page].extend(parent0keys)
+                    childs.add(page)
+            for key in parent0keys:
+                dict_bykey[key].extend(childs)
+        dict_bypage[ghost].pop()
 ## begin of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
@@ -125,6 +135,8 @@ def make_keyword(make_keys):
 #######################################################################
 
 def tagging_pages(dict_occ_ref, inherit_keys = False):
+    dict_occ_ref = json.loads(open('output/dict_occ_ref.json').read())
+
     global dict_bypage
     dict_bypage = defaultdict(list)
     global dict_bykey
@@ -150,7 +162,6 @@ def tagging_pages(dict_occ_ref, inherit_keys = False):
 
     if make_keys:
         make_keyword(make_keys)
-
     #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
     if inherit_keys:
         inherit_thedicts()

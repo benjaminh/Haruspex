@@ -9,8 +9,8 @@ import os
 import ntpath
 import json
 import ana_postprocessing
-config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
-# config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
+# config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
+config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
 
 #FICHIERS D'ENTREE#####################################################
 # linkwords_file_path = config['entries']['linkwords_file_path']
@@ -102,4 +102,5 @@ for nb_passe in range(1, global_steps):
 
 ana_useful.write_output(cands, dict_occ_ref)
 print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/output/ directory')
-# ana_postprocessing.tagging_pages(dict_occ_ref)
+with open('output/dict_occ_ref.json', 'w') as json_dict_occ_ref:
+	json.dump(dict_occ_ref, json_dict_occ_ref, ensure_ascii=False, indent=4)

@@ -59,3 +59,4 @@ target/
 # Custom
 memoireMQ_test/
 *~
+*config.json
