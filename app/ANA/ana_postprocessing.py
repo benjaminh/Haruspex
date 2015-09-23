@@ -24,12 +24,12 @@ def post_supervisedkeys():
     make_keys = set() # a set is better in case of ducplicates and provides a faster access to check
     remove_keys = set()
     for key in modifs:
-        if key['modification'] == 'modifie':
-            if '\\' not in key[nouveau_mot_cle]:
-                change_keys[key] = key[nouveau_mot_cle]
-        if key['modification'] == 'nouveau':
+        if modifs[key]['modification'] == 'modifie':
+            if '\\' not in modifs[key]["nouveau_mot_cle"]:
+                change_keys[key] = modifs[key]["nouveau_mot_cle"]
+        if modifs[key]['modification'] == 'nouveau':
             make_keys.add(key)
-        if key['modification'] == 'supprime':
+        if modifs[key]['modification'] == 'supprime':
             remove_keys.add(key)
     return change_keys, make_keys, remove_keys
 
@@ -79,6 +79,10 @@ def inherit_thedicts():
             for key in parent1keys:
                 dict_bykey[key].extend(childs)
 
+## begin of functions to add keywords to keypages, if the user added new keywords
+#######################################################################
+#######################################################################
+
 #build a flex regex to find the new keyword in the pages
 def build_newkeys_regex(make_keys):
     newkeys_regex = {}
@@ -106,15 +110,16 @@ def check4keyword_inpage(page_name, newkeys_regex):
                 keywords.append(newkeys_regex[key_regex])#if the keyword is found thanks to its regex pattern (flexible) then the user defined key shape is added to a list
     return keywords #list of "user_defined_keys" found in a page
 
-def make_keyword(newkeys_regex):
+def make_keyword(make_keys):
+    newkeys_regex = build_newkeys_regex(make_keys)
     pages_name = glob.glob("pages/fiche*.txt")
     for page_name in pages_name:
         keywords_inpage = check4keyword_inpage(page_name, newkeys_regex)
         if keywords_inpage != []:
             page_number = re.findall(r'([\_|\d]+)', page_name)
-            dict_bypage[page_number].extend(keywords_inpage) # add the new found keywords to the existing dict
+            dict_bypage[page_number[0]].extend(keywords_inpage) # add the new found keywords to the existing dict
             for keyword in keywords_inpage:
-                dict_bykey[keyword].append(page_number)
+                dict_bykey[keyword].append(page_number[0])
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
@@ -142,6 +147,9 @@ def tagging_pages(dict_occ_ref, inherit_keys = False):
                     keyword = value[1]
                 dict_bypage[page_number].append(keyword) #page_number:keywords in page
                 dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
+
+    if make_keys:
+        make_keyword(make_keys)
 
     #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
     if inherit_keys:
