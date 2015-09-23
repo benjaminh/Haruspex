@@ -240,10 +240,10 @@ class Haruspex(QMainWindow):
         elif value == 2:
             self.ana_thresholds_dict.update(
             {"nucleus_nestedsteps": 3,
-            "nucleus_threshold": [1,2,2,3],
-            "expansion_threshold": 2,
-            "expression_threshold": 2,
-            "recession_threshold": 2
+            "nucleus_threshold": [2,4,4,5],
+            "expansion_threshold": 3,
+            "expression_threshold": 3,
+            "recession_threshold": 3
             })
         elif value == 3:
             self.ana_thresholds_dict.update(
@@ -406,7 +406,7 @@ class Haruspex(QMainWindow):
                 modified_keywords[key] = {'modification':'modifie', 'nouveau_mot_cle':item.text()}
         modified_keywords.update(deleted_keywords)
 
-        with open(self.project_directory+"/final_keywords.json", 'w', encoding = 'utf8') as outfile:
+        with open(self.project_directory+"/output/final_keywords.json", 'w', encoding = 'utf8') as outfile:
             json.dump(modified_keywords, outfile, ensure_ascii=False, indent=4)
             outfile.close()
         self.ana_results_saved.setText('Résultats sauvegardés')

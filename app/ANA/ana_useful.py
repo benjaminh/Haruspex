@@ -17,8 +17,10 @@ seuil_egal_sple = 8
 #file object est le produit de `open`
 def build_bootlist(fileobject):
     global bootcands
-    lines = fileobject.readlines()
-    bootcands = list(map(lambda s: re.sub(r'\n', '', s), lines))
+    text = fileobject.read()
+    bootcands = re.split('\W+', text)
+    # lines = fileobject.readlines()
+    # bootcands = list(map(lambda s: re.sub(r'\n', '', s), lines))
     return bootcands
 
 def build_stoplist(stopword_file_path):
@@ -104,6 +106,7 @@ def egal_sple_chain(s1, s2):
 
 # in dict_occ_ref, the keys are 'position' and the values are [shape, status, history]. str shape; str status; list of occurrence(s) history
 def text2occ(txt_file_path):
+    global last_occ
     dict_occ_ref = {}
     i = 3
     dict_occ_ref[1] = ' ', 't', [] #fake first occurrence just to avoid having a cand in first position.
@@ -128,6 +131,8 @@ def text2occ(txt_file_path):
             if marked == False:
                 dict_occ_ref[i] = word, 't', [] #the history is empty at the begining
         dict_occ_ref[i+1] = ' ', 't', [] #fake last occurrence just to avoid having a cand in last position.
+        dict_occ_ref[0] = ' ', 't', [] #fake first occurrence just to avoid having a cand in last position.
+        last_occ = i+1
         return dict_occ_ref
 
 
@@ -147,7 +152,7 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                 key1 = key
                 key2 = key
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et w) après le candidat (les stopwords (de type noté 'v') ne comptent pas)
-                while count_fw < after_cand:
+                while count_fw < after_cand and key1 <= last_occ: #last_occ is global var defined when building the dict_oc_ref (see function above)
                     key1 +=1
                     if key1 in dict_occ_ref:
                         occurrence = [key1]
@@ -156,7 +161,7 @@ def define_windows(dict_occ_ref, candidates, width, cand_pos):
                         if occurrence[2] != 'v':
                             count_fw += 1
                 # boucle pour insérer autant d'étiquettes que demandées (paramètres width et cand_pos) avant le candidat (les stopwords (de type noté 'v') ne comptent pas)
-                while count_bw < before_cand:
+                while count_bw < before_cand and key2 >= 0:
                     key2 -=1
                     if key2 in dict_occ_ref:
                         occurrence = [key2]
@@ -282,35 +287,28 @@ def cut_window(window, length):
 
 def write_output(cands, dict_occ_ref):
     # with open('output/context.txt', 'w', encoding = 'utf8') as contextfile:
-        with open('output/keywords.txt', 'w', encoding = 'utf8') as outputfile:
-                dict_output = {}
-                dict_context = {}
-                # contextfile.write("file for corrrelating the found candidates in their original context")
-                for cand in cands:
-                    dict_occ_ref[-4] = '', 't', []
-                    dict_occ_ref[-3] = '', 't', []
-                    dict_occ_ref[-2] = '', 't', []
-                    dict_occ_ref[-1] = '', 't', []
-                    dict_occ_ref[0] = '', 't', [] #The firs key was 1; 0 is a fake first occurrence to be able to write the context of an eventual first occurrence cand
-                    windows = define_windows(dict_occ_ref, [cand], 9, 5)
-                    dict_output[cand] = len(windows) # number of occurrences found (how many context windows)
-                    for window in windows:
-                        contextstr = ''
-                        for occ in window:
-                            if re.match(r'wxcv', occ[1]):
-                                continue
-                            else:
-                                contextstr += (occ[1] + ' ') #re-create the 'lost spaces'
-                        # contextfile.write(str(contextstr)+'\n')
-                        contextstr = re.sub(r'( )(?=[\.,:!?])', '', contextstr) # delete the spaces followed by any ponctuation.
-                        contextstr = re.sub(r'(?<=\'|’)( )', '', contextstr) # delete the spaces ater an apostrophe
-                        dict_context.setdefault(cand, []).append(str(contextstr)) #create a dict of each cand's context to drop in a json file for the GUI
-                with open('output/context.json', 'w') as json_contextfile:
-                    json.dump(dict_context, json_contextfile, ensure_ascii=False, indent=4)
-                outputfile.write("keywords and occurrences\n\n")
-                cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
-                for key in cands_ordered:
-                    outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
+    with open('output/keywords.txt', 'w', encoding = 'utf8') as outputfile:
+        dict_output = {}
+        dict_context = {}
+        for cand in cands:
+            windows = define_windows(dict_occ_ref, [cand], 9, 5)
+            dict_output[cand] = len(windows) # number of occurrences found (how many context windows)
+            for window in windows:
+                contextstr = ''
+                for occ in window:
+                    if re.match(r'wxcv', occ[1]):
+                        continue
+                    else:
+                        contextstr += (occ[1] + ' ') #re-create the 'lost spaces'
+                contextstr = re.sub(r'( )(?=[\.,:!?])', '', contextstr) # delete the spaces followed by any ponctuation.
+                contextstr = re.sub(r'(?<=\'|’)( )', '', contextstr) # delete the spaces ater an apostrophe
+                dict_context.setdefault(cand, []).append(str(contextstr)) #create a dict of each cand's context to drop in a json file for the GUI
+        with open('output/context.json', 'w') as json_contextfile:
+            json.dump(dict_context, json_contextfile, ensure_ascii=False, indent=4)
+        outputfile.write("keywords and occurrences\n\n")
+        cands_ordered = sorted(dict_output, key=lambda cand: dict_output[cand], reverse=True)
+        for key in cands_ordered:
+            outputfile.write(str(dict_output[key]) + ' :  ' + str(key) + '\n')
 
 def merge_dicts(dict_list):
     result = {}

@@ -10,6 +10,7 @@ import ntpath
 import json
 import ana_postprocessing
 config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
+# config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
 
 #FICHIERS D'ENTREE#####################################################
 # linkwords_file_path = config['entries']['linkwords_file_path']
@@ -68,6 +69,8 @@ dict_expre = {}
 for nb_passe in range(1, global_steps):
     dict_expa = {}
     dict_expre = {}
+    print('\n\n\n################# step n°', str(nb_passe), '#################\n')
+
     for nucleus_steps in range(1, nucleus_steps):
         ana_useful.write_log(log_file_path,"\n\n########################################\n")
         ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
@@ -95,8 +98,8 @@ for nb_passe in range(1, global_steps):
     cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
     diff = len(cands)-old_len_cands
     print('Variation du nombre de candidats :', diff)
-
-    print('CANDIDATS \n step n°',nb_passe, '\n', cands, '\n\n################# step n°',nb_passe+1, '#################\n')
+    print('CANDIDATS \n' , cands)
 
 ana_useful.write_output(cands, dict_occ_ref)
-ana_postprocessing.tagging_pages(dict_occ_ref)
+print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/output/ directory')
+# ana_postprocessing.tagging_pages(dict_occ_ref)

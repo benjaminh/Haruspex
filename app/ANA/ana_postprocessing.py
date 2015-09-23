@@ -20,17 +20,17 @@ from collections import Counter, defaultdict
 
 def post_supervisedkeys():
     modifs = json.loads(open('output/final_keywords.json').read())
-        change_keys = {}
-        make_keys = set() # a set is better in case of ducplicates and provides a faster access to check
-        remove_keys = set()
-        for key in modifs:
-            if key['modification'] == 'modifie':
-                if '\\' not in key[nouveau_mot_cle]:
-                    change_keys[key] = key[nouveau_mot_cle]
-            if key['modification'] == 'nouveau':
-                make_keys.add(key)
-            if key['modification'] == 'supprime':
-                remove_keys.add(key)
+    change_keys = {}
+    make_keys = set() # a set is better in case of ducplicates and provides a faster access to check
+    remove_keys = set()
+    for key in modifs:
+        if key['modification'] == 'modifie':
+            if '\\' not in key[nouveau_mot_cle]:
+                change_keys[key] = key[nouveau_mot_cle]
+        if key['modification'] == 'nouveau':
+            make_keys.add(key)
+        if key['modification'] == 'supprime':
+            remove_keys.add(key)
     return change_keys, make_keys, remove_keys
 
 
@@ -54,30 +54,30 @@ def inherit_thedicts():
     ghosts.pop('0_0_0')
     for ghost in ghosts:
         childs = set()
-            parent1 = re.findall(r'(\d)(?=_0_0)', ghost)
-            parent2child(parent1[0])
-            if parent1:
-                parent1 = parent1[0]
-                parent1keys = dict_bykey[parent1 + '_0_0'].pop()
-                child1_regex = parent1 + '\d_\d'
-                for page in dict_bypage:
-                    if re.match(child_regex, page):
-                        dict_bypage[page].extend(parent1keys)
-                        childs.append(page)
-                for key in parent1keys:
-                    dict_bykey[key].extend(childs)
+        parent1 = re.findall(r'(\d)(?=_0_0)', ghost)
+        parent2child(parent1[0])
+        if parent1:
+            parent1 = parent1[0]
+            parent1keys = dict_bykey[parent1 + '_0_0'].pop()
+            child1_regex = parent1 + '\d_\d'
+            for page in dict_bypage:
+                if re.match(child_regex, page):
+                    dict_bypage[page].extend(parent1keys)
+                    childs.append(page)
+            for key in parent1keys:
+                dict_bykey[key].extend(childs)
 
-            parent2 = re.findall(r'(\d_[^0])(?=_0)', ghost)
-            if parent2:
-                parent2 = parent2[0]
-                parent2keys = dict_bykey[parent2 + '_0'].pop()
-                child2_regex = parent2 + '_\d'
-                for page in dict_bypage:
-                    if re.match(child2_regex, page):
-                        dict_bypage[page].extend(parent2keys)
-                        childs.append(page)
-                for key in parent1keys:
-                    dict_bykey[key].extend(childs)
+        parent2 = re.findall(r'(\d_[^0])(?=_0)', ghost)
+        if parent2:
+            parent2 = parent2[0]
+            parent2keys = dict_bykey[parent2 + '_0'].pop()
+            child2_regex = parent2 + '_\d'
+            for page in dict_bypage:
+                if re.match(child2_regex, page):
+                    dict_bypage[page].extend(parent2keys)
+                    childs.append(page)
+            for key in parent1keys:
+                dict_bykey[key].extend(childs)
 
 #build a flex regex to find the new keyword in the pages
 def build_newkeys_regex(make_keys):
