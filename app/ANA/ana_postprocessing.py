@@ -133,42 +133,41 @@ def make_keyword(make_keys):
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
+os.chdir("/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/")
+dict_occ_ref = json.loads(open('output/dict_occ_ref.json').read())
+inherit_keys = True
+global dict_bypage
+dict_bypage = defaultdict(list)
+global dict_bykey
+dict_bykey = defaultdict(list)
 
-def tagging_pages(dict_occ_ref, inherit_keys = False):
-    dict_occ_ref = json.loads(open('output/dict_occ_ref.json').read())
+change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
+page_number = '0_0_0'
+#TODO verifier que la fonction sorted fonctionne bien.
+for pos in sorted(dict_occ_ref):
+    value = dict_occ_ref[pos]
+    if value[1] == 'v':
+        if re.match(r'wxcv[\d|_]*wxcv', value[0]):
+            page_num = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
+            page_number = page_num[0]
+            #keypage_name = 'output/keyword_pages/page' + page_number[0] + '.key'
+    if value[1] not in ['v', 't'] and value[1] not in remove_keys: #catch cands except removed by user ones.
+            if value[1] in change_keys:
+                keyword = change_keys[value[1]] # rename the keyword with the user defined one
+            else:
+                keyword = value[1]
+            dict_bypage[page_number].append(keyword) #page_number:keywords in page
+            dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
 
-    global dict_bypage
-    dict_bypage = defaultdict(list)
-    global dict_bykey
-    dict_bykey = defaultdict(list)
+if make_keys:
+    make_keyword(make_keys)
+#this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
+if inherit_keys:
+    inherit_thedicts()
+else:
+    clean_thedicts()
 
-    change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
-    page_number = '0_0_0'
-    #TODO verifier que la fonction sorted fonctionne bien.
-    for pos in sorted(dict_occ_ref):
-        value = dict_occ_ref[pos]
-        if value[1] == 'v':
-            if re.match(r'wxcv[\d|_]*wxcv', value[0]):
-                page_num = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
-                page_number = page_num[0]
-                #keypage_name = 'output/keyword_pages/page' + page_number[0] + '.key'
-        if value[1] not in ['v', 't'] and value[1] not in remove_keys: #catch cands except removed by user ones.
-                if value[1] in change_keys:
-                    keyword = change_keys[value[1]] # rename the keyword with the user defined one
-                else:
-                    keyword = value[1]
-                dict_bypage[page_number].append(keyword) #page_number:keywords in page
-                dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
-
-    if make_keys:
-        make_keyword(make_keys)
-    #this two functions below are build in order to manage the keywords related to a page that doesn't exist because toofew words in it (see option of LaTeX2pages)
-    if inherit_keys:
-        inherit_thedicts()
-    else:
-        clean_thedicts()
-
-    with open('output/where_keyword.json', 'w') as json_wherekey:
-        json.dump(dict_bykey, json_wherekey, ensure_ascii=False, indent=4)
-    with open('output/what_inpage.json', 'w') as json_whatinpage:
-        json.dump(dict_bypage, json_whatinpage, ensure_ascii=False, indent=4)
+with open('output/where_keyword.json', 'w') as json_wherekey:
+    json.dump(dict_bykey, json_wherekey, ensure_ascii=False, indent=4)
+with open('output/what_inpage.json', 'w') as json_whatinpage:
+    json.dump(dict_bypage, json_whatinpage, ensure_ascii=False, indent=4)
