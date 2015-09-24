@@ -9,8 +9,10 @@ import os
 import ntpath
 import json
 import ana_postprocessing
-# config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
-config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
+
+
+config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
+#config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
 
 #FICHIERS D'ENTREE#####################################################
 # linkwords_file_path = config['entries']['linkwords_file_path']
