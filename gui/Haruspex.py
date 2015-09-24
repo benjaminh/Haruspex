@@ -191,7 +191,7 @@ class Haruspex(QMainWindow):
         self.ana_thresholds = QSlider(Qt.Horizontal)
         self.ana_thresholds.valueChanged.connect(self.ana_thresholds_slider)
         self.ana_thresholds.setMinimum(0)
-        self.ana_thresholds.setMaximum(3)
+        self.ana_thresholds.setMaximum(5)
         self.ana_thresholds_dict = {}
         #Bouton d'exécution
         self.ana_exec_button = QPushButton('Lancer ANA', self)
@@ -220,39 +220,22 @@ class Haruspex(QMainWindow):
         self.ana_directory = self.ana_directory_edit.text()
 
     def ana_thresholds_slider(self, value):
-        # TODO redéfinir les 4 configs possibles
-        if value == 0:
-            self.ana_thresholds_dict.update(
-            {"nucleus_nestedsteps": 3,
-            "nucleus_threshold": [1,2,2,3],
-            "expansion_threshold": 2,
-            "expression_threshold": 2,
-            "recession_threshold": 2
-            })
-        elif value == 1:
-            self.ana_thresholds_dict.update(
-            {"nucleus_nestedsteps": 3,
-            "nucleus_threshold": [1,2,2,3],
-            "expansion_threshold": 2,
-            "expression_threshold": 2,
-            "recession_threshold": 2
-            })
-        elif value == 2:
-            self.ana_thresholds_dict.update(
-            {"nucleus_nestedsteps": 3,
-            "nucleus_threshold": [2,4,4,5],
-            "expansion_threshold": 3,
-            "expression_threshold": 3,
-            "recession_threshold": 3
-            })
-        elif value == 3:
-            self.ana_thresholds_dict.update(
-            {"nucleus_nestedsteps": 3,
-            "nucleus_threshold": [1,2,2,3],
-            "expansion_threshold": 2,
-            "expression_threshold": 2,
-            "recession_threshold": 2
-            })
+        with open(self.ana_directory+"/threshold_levels.json", 'r') as outfile:
+            threshold_reference = json.loads(outfile.read())
+            if value == 0:
+                picked_thresholds = threshold_reference["threshold_verylow"]
+            elif value == 1:
+                picked_thresholds = threshold_reference["threshold_low"]
+            elif value == 2:
+                picked_thresholds = threshold_reference["threshold_med1"]
+            elif value == 3:
+                picked_thresholds = threshold_reference["threshold_med2"]
+            elif value == 4:
+                picked_thresholds = threshold_reference["threshold_high"]
+            elif value == 5:
+                picked_thresholds = threshold_reference["threshold_veryhigh"]
+            picked_thresholds["nucleus_nestedsteps"] = 3
+            self.ana_thresholds_dict.update(picked_thresholds)
 
     def ana_config_save(self, bootstrap):
         with open(self.project_directory+"/bootstrap", "w", encoding = 'utf8') as outfile:
