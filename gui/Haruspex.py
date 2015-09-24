@@ -424,4 +424,27 @@ class Haruspex(QMainWindow):
     ###############################################
 
     def ana_neo_window(self):
-        print("nothing yet")
+        ana_neo_layout = QVBoxLayout(self.ana_neo_view)
+        top_layout = QGridLayout()
+
+        self.ana_toneo_exec = QPushButton('Lancer', self)
+        self.ana_toneo_exec.clicked.connect(self.ana_toneo)
+        self.ana_toneo_label = QLabel(self)
+        self.ana_toneo_label.setText('Générer les liens entre fiches')
+
+        self.ana_toneo_done_label = QLabel(self)
+
+        top_layout.addWidget(self.ana_toneo_exec, 0, 1)
+        top_layout.addWidget(self.ana_toneo_label, 0, 0)
+        top_layout.addWidget(self.ana_toneo_done_label, 1, 0, 1, 2)
+        ana_neo_layout.addLayout(top_layout)
+
+
+    def ana_toneo(self):
+        toneo_dir = os.path.join(self.ana_directory, os.pardir, "toneo")
+        toneo_dir_path = os.path.join(toneo_dir, 'toneo.py')
+        origWD = os.getcwd() # remember our original working directory
+        os.chdir(toneo_dir)
+        subprocess.call(['python3', toneo_dir_path, self.project_directory])
+        os.chdir(origWD)
+        self.ana_toneo_done_label.setText('Liens générés')
