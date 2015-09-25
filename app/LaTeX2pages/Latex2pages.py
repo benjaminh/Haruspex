@@ -30,8 +30,7 @@ if not os.path.exists('BeingClean/'):
 	os.makedirs('BeingClean/')
 if not os.path.exists('pages/'):
 	os.makedirs('pages/')
-if not os.path.exists('keywords/'):
-	os.makedirs('keywords/')
+
 
 
 etape += CleanLaTeX.AcoladeClose(Fichier_a_traiter, etape)

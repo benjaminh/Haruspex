@@ -59,10 +59,10 @@ def inherit_thedicts():
             parent2keys = dict_bypage[parent2 + '_0']
             child2_regex = parent2 + '_\d'
             for page in dict_bypage:
-                if re.match(child2_regex, page):
+                if re.search(child2_regex, page):
                     dict_bypage[page].extend(parent2keys)
                     childs.add(page)
-            for key in parent1keys:
+            for key in parent2keys:
                 dict_bykey[key].extend(childs)
 
         parent1 = re.findall(r'([^0]+)(?=_0_0$)', ghost)
@@ -71,7 +71,7 @@ def inherit_thedicts():
             parent1keys = dict_bypage[parent1 + '_0_0']
             child1_regex = parent1 + '_\d_\d'
             for page in dict_bypage:
-                if re.match(child1_regex, page) and page != (parent1 + '_0_0'):
+                if re.search(child1_regex, page) and page != (parent1 + '_0_0'):
                     dict_bypage[page].extend(parent1keys)
                     childs.add(page)
             for key in parent1keys:
@@ -83,7 +83,7 @@ def inherit_thedicts():
             parent0keys = dict_bypage[parent0 + '_0_0_0']
             child0_regex = parent0 + '_\d_\d_\d'
             for page in dict_bypage:
-                if re.match(child0_regex, page):
+                if re.search(child0_regex, page):
                     dict_bypage[page].extend(parent0keys)
                     childs.add(page)
             for key in parent0keys:
@@ -133,9 +133,10 @@ def make_keyword(make_keys):
 ## end of functions to add keywords to keypages, if the user added new keywords
 #######################################################################
 #######################################################################
-os.chdir("/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/")
+os.chdir("/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet3/")
 dict_occ_ref = json.loads(open('output/dict_occ_ref.json').read())
 inherit_keys = True
+
 global dict_bypage
 dict_bypage = defaultdict(list)
 global dict_bykey
@@ -147,7 +148,7 @@ page_number = '0_0_0'
 for pos in sorted(dict_occ_ref):
     value = dict_occ_ref[pos]
     if value[1] == 'v':
-        if re.match(r'wxcv[\d|_]*wxcv', value[0]):
+        if re.search(r'wxcv[\d|_]*wxcv', value[0]):
             page_num = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
             page_number = page_num[0]
             #keypage_name = 'output/keyword_pages/page' + page_number[0] + '.key'
