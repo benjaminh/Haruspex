@@ -299,15 +299,26 @@ class Haruspex(QMainWindow):
         self.keywordcontext = QTextEdit()
         self.keywordcontext.setReadOnly(True)
 
-        # Bouton de validation
+        # Bouton d'enregistrement
+        self.ana_results_add_keyword = QLineEdit()
+        self.ana_results_add_keyword.setPlaceholderText("mot-cle-1; mot-cle-2; etc.")
         self.ana_results_save_button = QPushButton('Enregistrer', self)
         self.ana_results_save_button.clicked.connect(self.ana_results_save)
         self.ana_results_saved = QLabel(self)
 
+        # Bouton d'exécution de ana_post_processing
+        self.ana_post_process_exec = QPushButton('Terminer', self)
+        self.ana_post_process_exec.clicked.connect(self.ana_post_processing)
+        self.ana_post_process_label = QLabel(self)
+        self.ana_post_process_label.setText('Valider les changements')
+
         self.results_layout.addWidget(self.scroll)
         self.results_layout.addWidget(self.keywordcontext)
-        bottom_layout.addWidget(self.ana_results_save_button, 0, 0)
-        bottom_layout.addWidget(self.ana_results_saved, 0, 1)
+        bottom_layout.addWidget(self.ana_results_save_button, 0, 1)
+        bottom_layout.addWidget(self.ana_results_add_keyword, 0, 0)
+        bottom_layout.addWidget(self.ana_results_saved, 0, 2)
+        bottom_layout.addWidget(self.ana_post_process_exec, 1, 0)
+        bottom_layout.addWidget(self.ana_post_process_label, 1, 1, 1, 2)
         post_ana_layout.addLayout(self.results_layout)
         post_ana_layout.addLayout(bottom_layout)
 
@@ -375,6 +386,7 @@ class Haruspex(QMainWindow):
         items = self.table.selectedItems()
         deleted_keywords = {}
         modified_keywords = {}
+        new_keywords = {}
         #TODO gérer la modification du texte
         for item in items:
             item_row = item.row()
@@ -387,16 +399,52 @@ class Haruspex(QMainWindow):
             elif item.checkState() == Qt.Checked and item.text() != key:
                 #Mots-cles modifiés
                 modified_keywords[key] = {'modification':'modifie', 'nouveau_mot_cle':item.text()}
-        modified_keywords.update(deleted_keywords)
 
-        with open(self.project_directory+"/output/final_keywords.json", 'w', encoding = 'utf8') as outfile:
+        added_keywords = self.ana_results_add_keyword.text().split(';')
+        for new_keyword in added_keywords:
+            new_keywords[new_keyword.strip()] = {'modification':'ajoute'}
+        modified_keywords.update(deleted_keywords)
+        modified_keywords.update(new_keywords)
+
+        with open(self.project_directory+"/output/modified_keywords.json", 'w', encoding = 'utf8') as outfile:
             json.dump(modified_keywords, outfile, ensure_ascii=False, indent=4)
             outfile.close()
         self.ana_results_saved.setText('Résultats sauvegardés')
+
+    def ana_post_processing(self):
+        ana_main_path = self.ana_directory
+        ana_post_proc_path = os.path.join(ana_main_path, 'ana_postprocessing.py')
+        origWD = os.getcwd() # remember our original working directory
+        os.chdir(ana_main_path)
+        subprocess.call(['python3', ana_post_proc_path, self.project_directory])
+        os.chdir(origWD)
 
     ###############################################
     # Onglet de communication avec Neo4j
     ###############################################
 
     def ana_neo_window(self):
-        print("nothing yet")
+        ana_neo_layout = QVBoxLayout(self.ana_neo_view)
+        top_layout = QGridLayout()
+
+        self.ana_toneo_exec = QPushButton('Lancer', self)
+        self.ana_toneo_exec.clicked.connect(self.ana_toneo)
+        self.ana_toneo_label = QLabel(self)
+        self.ana_toneo_label.setText('Générer les liens entre fiches')
+
+        self.ana_toneo_done_label = QLabel(self)
+
+        top_layout.addWidget(self.ana_toneo_exec, 0, 1)
+        top_layout.addWidget(self.ana_toneo_label, 0, 0)
+        top_layout.addWidget(self.ana_toneo_done_label, 1, 0, 1, 2)
+        ana_neo_layout.addLayout(top_layout)
+
+
+    def ana_toneo(self):
+        toneo_dir = os.path.join(self.ana_directory, os.pardir, "toneo")
+        toneo_dir_path = os.path.join(toneo_dir, 'toneo.py')
+        origWD = os.getcwd() # remember our original working directory
+        os.chdir(toneo_dir)
+        subprocess.call(['python3', toneo_dir_path, self.project_directory])
+        os.chdir(origWD)
+        self.ana_toneo_done_label.setText('Liens générés')
