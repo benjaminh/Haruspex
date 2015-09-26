@@ -11,8 +11,8 @@ import json
 import ana_postprocessing
 
 
-config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
-#config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
+#config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
+config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
 
 #FICHIERS D'ENTREE#####################################################
 # linkwords_file_path = config['entries']['linkwords_file_path']
@@ -30,7 +30,7 @@ txt_file_path = ntpath.basename(abs_txt_file_path)
 bootstrap_file_path = config['bootstrap_file_path']
 
 if not os.path.exists('output/'):
-	os.makedirs('output/')
+    os.makedirs('output/')
 log_file_path = 'output/log'
 
 
@@ -55,7 +55,7 @@ recession_threshold = int(config['recession_threshold'])
 #STEPS########################################################################
 global_steps = int(config['global_steps'])
 nucleus_steps = int(config['nucleus_nestedsteps'])
-
+automaticsteps = config['automaticsteps'] # True ou False
 
 with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"########################################\n")
@@ -64,11 +64,12 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
     ana_useful.write_log(log_file_path,"########################################\n")
 
+stop = False
+nb_passe = 0
 
-dict_expa = {}
-dict_expre = {}
-
-for nb_passe in range(1, global_steps):
+while not stop:
+    nb_passe += 1
+    global_steps -= 1
     dict_expa = {}
     dict_expre = {}
     print('\n\n\n################# step n°', str(nb_passe), '#################\n')
@@ -102,7 +103,13 @@ for nb_passe in range(1, global_steps):
     print('Variation du nombre de candidats :', diff)
     print('CANDIDATS \n' , cands)
 
+    if automaticsteps and diff == 0:
+        automaticsteps = False #out ouf this loop next time, for 2 more rounds
+        global_steps = 2 # run two more times  after having stoped discoverring cands.
+    elif not automaticsteps and global_steps == 0:
+        stop = True
+
 ana_useful.write_output(cands, dict_occ_ref)
 print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/output/ directory')
 with open('output/dict_occ_ref.json', 'w') as json_dict_occ_ref:
-	json.dump(dict_occ_ref, json_dict_occ_ref, ensure_ascii=False, indent=4)
+    json.dump(dict_occ_ref, json_dict_occ_ref, ensure_ascii=False, indent=4)
