@@ -174,7 +174,6 @@ class Haruspex(QMainWindow):
         # Curseur de sélection des seuils pour la collecte ANA
 
         # Disposition des outils de sélection
-        # TODO Modifier LaTeX2pages pour que text4ana.txt soit écrit dans le dossier du projet
         self.text4ana_edit = QLineEdit()
 
         ana_directory_label = QLabel('Répertoire de travail d\'ANA', self)
@@ -185,7 +184,7 @@ class Haruspex(QMainWindow):
         self.ana_loops = QLineEdit()
         loop_validator = QIntValidator()
         self.ana_loops.setValidator(loop_validator)
-
+        self.ana_autoloop = QCheckBox()
 
         # Définition des seuils
         self.ana_thresholds = QSlider(Qt.Horizontal)
@@ -205,6 +204,7 @@ class Haruspex(QMainWindow):
         form_layout.addRow('&Saisissez de 1 à 5 mots représentatifs séparés par un \' ; \'', self.ana_bootstrap)
         form_layout.addRow('&Seuils', self.ana_thresholds)
         form_layout.addRow('&Nombre de passes', self.ana_loops)
+        form_layout.addRow("&Nombre de passes automatique", self.ana_autoloop)
 
         self.ana_validate_button = QPushButton('Enregistrer les paramètres', self)
         self.ana_validate_button.clicked.connect(lambda: self.ana_config_save(self.ana_bootstrap.text()))
@@ -246,7 +246,8 @@ class Haruspex(QMainWindow):
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
             "txt_file_path": self.project_directory + "/text4ana.txt",
             "bootstrap_file_path": "bootstrap",
-            "global_steps": int(self.ana_loops.text())}
+            "global_steps": int(self.ana_loops.text()),
+            "automaticsteps": self.ana_autoloop.isChecked()}
             self.ana_config_json.update(self.ana_thresholds_dict)
             json.dump(self.ana_config_json, outfile, ensure_ascii=False, indent=4)
             self.validate_label.setText("Paramètres enregistrés")

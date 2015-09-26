@@ -60,12 +60,11 @@ def write_txt4ana(identifiant, titreSection, ContenuTxtSection):
 
 def Image(thisline, nextline, RnamePict):
     PictName = re.findall(RnamePict, thisline)
-    if "caption" in nextline:
-        PictLegende = re.findall(RcaptionPict, nextline)
-    else:
+    PictLegende = re.findall(RcaptionPict, nextline)
+    if not PictLegende:
         PictLegende = ['Pas_de_legende']
+    print(PictLegende)
     return PictName[0], PictLegende[0]
-    Picts.write(identifiant + '@' + PictName[0] + "\@" + PictLegende[0] + '\n')
 
 # Fonction pour enregistrer les footnotes en tant que références, placées de manière linéaires au fil du texte. Une même référence citée plusieurs fois, donnera lieu à plusieurs RefID (sale pratique d'écriture oblige)
 def References(thisline, ref_insection, dicorefs):
@@ -76,7 +75,6 @@ def References(thisline, ref_insection, dicorefs):
     #il y a ici une approximation qui consiste à reprendre la référence précédente. Mais impossible de savoir si l'utilisation de ladite reference et argumentée différement...
     for refere in linereferences:
         RefID += 1
-
         if not re.search(RibidOpCit, refere):
             dicorefs[RefID] = refere
             ref_insection[RefID] = refere
@@ -184,7 +182,7 @@ def writePages_and_txt4ana(OrigineFile, conclusion, tailleMini, step, decoupePar
                     write_txt4ana(IDf, titre, contenutxt)
                     EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
                     contenutxt = []
-                    ref_insection = []
+                    ref_insection = {}
                     NbMotsSect = 0
                     ti = re.findall(Rtitreparagraph, line)
                     titre = ti[0]

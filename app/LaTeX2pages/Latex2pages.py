@@ -38,3 +38,4 @@ if close_squarebrackets:
 	etape += CleanLaTeX.CrochetClose(Fichier_a_traiter, etape)
 etape += CleanLaTeX.Clean(Fichier_a_traiter, etape)
 indexing.writePages_and_txt4ana(Fichier_a_traiter, Mot_apres_la_derniere_fiche, Taille_minimale, etape, decoupe_paragraphe, Auteur_du_document, Date_de_publication_du_document, DossierImage)
+print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/output/ directory')
