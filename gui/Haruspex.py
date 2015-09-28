@@ -428,24 +428,46 @@ class Haruspex(QMainWindow):
         ana_neo_layout = QVBoxLayout(self.ana_neo_view)
         top_layout = QGridLayout()
 
-        self.ana_toneo_exec = QPushButton('Lancer', self)
+        self.ana_preneo_exec = QPushButton('Lancer', self)
+        self.ana_preneo_exec.clicked.connect(self.ana_preneo)
+        self.ana_preneo_label = QLabel(self)
+        self.ana_preneo_label.setText('Générer les liens entre fiches')
+        self.ana_preneo_done_label = QLabel(self)
+
+        self.ana_toneo_exec = QPushButton('Executer', self)
         self.ana_toneo_exec.clicked.connect(self.ana_toneo)
         self.ana_toneo_label = QLabel(self)
-        self.ana_toneo_label.setText('Générer les liens entre fiches')
-
+        self.ana_toneo_label.setText('Générer le graphe')
         self.ana_toneo_done_label = QLabel(self)
 
-        top_layout.addWidget(self.ana_toneo_exec, 0, 1)
-        top_layout.addWidget(self.ana_toneo_label, 0, 0)
-        top_layout.addWidget(self.ana_toneo_done_label, 1, 0, 1, 2)
+        top_layout.addWidget(self.ana_preneo_exec, 0, 1)
+        top_layout.addWidget(self.ana_preneo_label, 0, 0)
+        top_layout.addWidget(self.ana_preneo_done_label, 1, 0, 1, 2)
+
+        top_layout.addWidget(self.ana_toneo_exec, 2, 1)
+        top_layout.addWidget(self.ana_toneo_label, 2, 0)
+        top_layout.addWidget(self.ana_toneo_done_label, 3, 0, 1, 2)
+
         ana_neo_layout.addLayout(top_layout)
 
+    def ana_preneo(self):
+        preneo_dir = os.path.join(self.ana_directory, os.pardir, "toneo")
+        preneo_dir_path = os.path.join(preneo_dir, 'toneo.py')
+        origWD = os.getcwd() # remember our original working directory
+        os.chdir(preneo_dir)
+        subprocess.call(['python3', preneo_dir_path, self.project_directory])
+        os.chdir(origWD)
+        self.ana_preneo_done_label.setText('Liens générés')
 
     def ana_toneo(self):
         toneo_dir = os.path.join(self.ana_directory, os.pardir, "toneo")
-        toneo_dir_path = os.path.join(toneo_dir, 'toneo.py')
+        nodes_dir_path = os.path.join(toneo_dir, 'create_nodes.py')
+        edges_dir_path = os.path.join(toneo_dir, 'create_edges.py')
         origWD = os.getcwd() # remember our original working directory
         os.chdir(toneo_dir)
-        subprocess.call(['python3', toneo_dir_path, self.project_directory])
+        nodes_process = subprocess.Popen(['python3', nodes_dir_path, self.project_directory])
+        nodes_process.communicate()
+        edges_process = subprocess.Popen(['python3', edges_dir_path, self.project_directory])
+        edges_process.communicate()
         os.chdir(origWD)
-        self.ana_toneo_done_label.setText('Liens générés')
+        self.ana_toneo_done_label.setText('Graphe généré')
