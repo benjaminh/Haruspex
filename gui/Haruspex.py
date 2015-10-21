@@ -5,8 +5,9 @@
 import sys, os, subprocess
 import itertools
 import json
+import re
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
+from PyQt5.QtCore import QDate, Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QTextCursor, QIntValidator
 
 
@@ -66,7 +67,7 @@ class Haruspex(QMainWindow):
     ###############################################
 
     def pre_ana_window(self):
-
+        self.odt_file = ''
         self.tex_file = ''
         self.pict_folder = ''
         self.json_data = {}
@@ -103,8 +104,9 @@ class Haruspex(QMainWindow):
         self.author = QLineEdit()
         self.author.setPlaceholderText("Bertrand Dumas")
         form_layout.addRow("&Auteur", self.author)
-        self.date_pub = QLineEdit()
-        self.date_pub.setPlaceholderText("01/01/2000")
+        # self.date_pub = QLineEdit()
+        self.date_pub = QDateEdit(calendarPopup=True, displayFormat='MMM yyyy', date=QDate.currentDate())
+        # self.date_pub.setPlaceholderText("01/01/2000")
         form_layout.addRow("Date de publication", self.date_pub)
 
         validate_button = QPushButton('Enregistrer les paramètres', self)
@@ -121,6 +123,16 @@ class Haruspex(QMainWindow):
         pre_ana_window_layout.addLayout(form_layout)
         pre_ana_window_layout.addLayout(bottom_layout)
 
+
+    # silent conversion of odt file into minimal tex
+    def writer2latex(self, odt_file):
+        w2l_dir = os.path.join(self.project_dir_edit.text(), os.pardir, "app/writer2latex")
+        os.chdir(w2l_dir)
+        arguments = ['-config', 'config/preANA.xml', odt_file]
+        subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
+        tex_file = re.sub(r'odt$', 'tex', odt_file)
+        return tex_file
+
     def pre_ana_dir_open(self):
         project_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
         self.project_dir_edit.setText(project_dir)
@@ -130,6 +142,12 @@ class Haruspex(QMainWindow):
             for name in files:
                 if name.lower().endswith(".tex"):
                     self.tex_file = os.path.join(dirpath, name)
+                elif name.lower().endswith(".odt"):
+                    self.odt_file = os.path.join(dirpath, name)
+            # si pas de .tex mais .odt dans le dossier: silent conversion
+            if self.tex_file == '':
+                self.tex_file = self.writer2latex(self.odt_file)
+                del self.odt_file
             for dirname in dirnames:
                 if dirname.lower().endswith("-img"):
                     self.pict_folder = dirname
