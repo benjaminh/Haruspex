@@ -63,7 +63,6 @@ def Image(thisline, nextline, RnamePict):
     PictLegende = re.findall(RcaptionPict, nextline)
     if not PictLegende:
         PictLegende = ['Pas_de_legende']
-    print(PictLegende)
     return PictName[0], PictLegende[0]
 
 # Fonction pour enregistrer les footnotes en tant que références, placées de manière linéaires au fil du texte. Une même référence citée plusieurs fois, donnera lieu à plusieurs RefID (sale pratique d'écriture oblige)

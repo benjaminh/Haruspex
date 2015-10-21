@@ -126,9 +126,9 @@ class Haruspex(QMainWindow):
 
     # silent conversion of odt file into minimal tex
     def writer2latex(self, odt_file):
-        w2l_dir = os.path.join(self.project_dir_edit.text(), os.pardir, "app/writer2latex")
+        w2l_dir = os.path.join(self.project_dir_edit.text(), os.pardir, os.path.join('app','writer2latex'))
         os.chdir(w2l_dir)
-        arguments = ['-config', 'config/preANA.xml', odt_file]
+        arguments = ['-config', os.path.join('config', 'preANA.xml'), odt_file]
         subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
         tex_file = re.sub(r'odt$', 'tex', odt_file)
         return tex_file
@@ -147,6 +147,7 @@ class Haruspex(QMainWindow):
             # si pas de .tex mais .odt dans le dossier: silent conversion
             if self.tex_file == '':
                 self.tex_file = self.writer2latex(self.odt_file)
+                self.pict_folder = [folder for folder in os.listdir(dirpath) if folder.endswith("-img")][0]
                 del self.odt_file
             for dirname in dirnames:
                 if dirname.lower().endswith("-img"):
