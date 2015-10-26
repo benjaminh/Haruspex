@@ -98,16 +98,14 @@ class Haruspex(QMainWindow):
         size_validator = QIntValidator()
         self.sheet_min_size.setValidator(size_validator)
         form_layout.addRow("&Taille minimum des fiches (en mots)", self.sheet_min_size)
-        self.word_after_last_sheet = QLineEdit()
-        self.word_after_last_sheet.setPlaceholderText("Conclusion")
-        form_layout.addRow("&Mot présent après la dernière fiche", self.word_after_last_sheet)
+        self.write_lastsection = QCheckBox()
+        form_layout.addRow("&Écrire la dernière section?", self.write_lastsection)
         self.author = QLineEdit()
         self.author.setPlaceholderText("Bertrand Dumas")
         form_layout.addRow("&Auteur", self.author)
-        # self.date_pub = QLineEdit()
-        self.date_pub = QDateEdit(calendarPopup=True, displayFormat='MMM yyyy', date=QDate.currentDate())
-        # self.date_pub.setPlaceholderText("01/01/2000")
-        form_layout.addRow("Date de publication", self.date_pub)
+        self.calendar = QDateEdit(calendarPopup=True, displayFormat='MMMM yyyy', date=QDate.currentDate())
+        self.date_pub = QDate.toString(self.calendar.date(), 'yyyy-MM-dd')
+        form_layout.addRow("Date de publication", self.calendar)
 
         validate_button = QPushButton('Enregistrer les paramètres', self)
         validate_button.clicked.connect(lambda: self.pre_ana_validate(self.project_dir_edit.text()))
@@ -161,9 +159,9 @@ class Haruspex(QMainWindow):
 
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", 'w', encoding = 'utf-8') as outfile:
-            params = {'last_word': self.word_after_last_sheet.text(),
+            params = {'write_lastsection': self.write_lastsection.isChecked(),
             'author': self.author.text(),
-            'publi_date': self.date_pub.text(),
+            'publi_date': self.date_pub,
             'paragraph_cut': self.cut_paragraphs.isChecked(),
             'close_squarebrackets': self.close_brackets.isChecked(),
             'mini_size': int(self.sheet_min_size.text())}
@@ -222,8 +220,10 @@ class Haruspex(QMainWindow):
         form_layout.addRow('&Fichier à traiter', self.text4ana_edit)
         form_layout.addRow('&Saisissez de 1 à 5 mots représentatifs séparés par un \' ; \'', self.ana_bootstrap)
         form_layout.addRow('&Seuils', self.ana_thresholds)
-        form_layout.addRow('&Nombre de passes', self.ana_loops)
         form_layout.addRow("&Nombre de passes automatique", self.ana_autoloop)
+        form_layout.addRow('&Nombre de passes', self.ana_loops)
+
+
 
         self.ana_validate_button = QPushButton('Enregistrer les paramètres', self)
         self.ana_validate_button.clicked.connect(lambda: self.ana_config_save(self.ana_bootstrap.text()))
@@ -261,12 +261,16 @@ class Haruspex(QMainWindow):
             outfile.write(bootstrap)
             outfile.close()
         with open(self.project_directory+"/ana_config.json", "w", encoding = 'utf8') as outfile:
+            if self.ana_autoloop.isChecked():
+                analoops = 0
+            else:
+                analoops = int(self.ana_loops.text())
             self.ana_config_json = {"linkwords_file_path": self.ana_directory + "/french/schema",
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
             "txt_file_path": self.project_directory + "/text4ana.txt",
             "bootstrap_file_path": "bootstrap",
-            "global_steps": int(self.ana_loops.text()),
-            "automaticsteps": self.ana_autoloop.isChecked()}
+            "automaticsteps": self.ana_autoloop.isChecked(),
+            "global_steps": analoops}
             self.ana_config_json.update(self.ana_thresholds_dict)
             json.dump(self.ana_config_json, outfile, ensure_ascii=False, indent=4)
             self.validate_label.setText("Paramètres enregistrés")

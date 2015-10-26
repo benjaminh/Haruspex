@@ -5,15 +5,12 @@ import os
 import re
 import json
 
-# Picts = open('HallesA/pages/images', 'w', encoding = 'utf8')
-# Refs = open('HallesApages/references', 'w', encoding = 'utf8')
 
-#RnamePict = re.compile(r"(?<=\\includegraphics{" + re.escape(DossierImage) + r')(.*)(?=}), re.UNICODE) #regex déplacée dans la fonction "découpe" pour récupérer le dossier où sont placées les images #recupère le nom de l'image (chemin dans son dossier) après suppression des para d'affichage (cf ci-dessus)
 RcaptionPict = re.compile(r'(?<=\\caption{)([^}]*)(?=})', re.UNICODE) #recupère la légende de l'image
-Rfootnote = re.compile(r'(\\footnote)([^}]*})', re.UNICODE) #récupere l'ensemble (la footnote) pour le supprimer
+Rcaption = re.compile(r'(\\caption)([^}]*})', re.UNICODE)
+Rfootnote = re.compile(r'(\\footnote[^}]*})', re.UNICODE) #récupere l'ensemble (la footnote) pour le supprimer
 RcontenuFootnote = re.compile(r'(?<=\\footnote{)([^}]*)(?=})', re.UNICODE) # recupère le contenu de la footnote
 RcontenuFootnotetext = re.compile(r'(?<=\\footnotetext{)([^}]*)(?=})', re.UNICODE) # recupère le contenu de la footnotetext
-RnombreuxSauts = re.compile(r'((?<=\n)(\s+)(?=\S))', re.UNICODE)
 
 Rtitresection = re.compile(r'(?<=\\section{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
 Rtitresubsection = re.compile(r'(?<=\\subsection{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
@@ -21,220 +18,296 @@ Rtitresubsubsection = re.compile(r'(?<=\\subsubsection{)(.*)(?=})', re.UNICODE) 
 Rtitreparagraph = re.compile(r'(?<=\\paragraph{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
 
 RibidOpCit = re.compile(r'(ibid|op\.\s?cit\.)', re.IGNORECASE)
-# Ribid = re.compile(r'(ibid)', re.IGNORECASE)
-# RopCit = re.compile(r'(op\.\s?cit\.)', re.IGNORECASE) # catch les op.cit.
 RopCitcontenu = re.compile(r'((?:[A-Z]*[^A-Z]*){,2})(?=op\.\s?cit\.|ibid|Ibid|Op. Cit|loc. cit.|Loc. cit.)(?u)') # catch ce qui précède un op. cit. jusqu'à rencontrer deux lettres majuscules -> donne l'élément cité.
 # RopCitcontenu = re.compile(r'([A-Z]*[^A-Z]*)(?=op\.\s?cit.)', re.UNICODE) # catch ce qui précède un op. cit. jusqu'à rencontrer une lettre majuscule -> donne l'élément cité.
 Rpages = re.compile(r'(\Wpp?\W?\W?[\d\s,-]+)', re.UNICODE) # catch les numéros de page dans une citation
 
+Ranycommand = re.compile(r'\\\w*\[?\{?[^\}|\]]*\}?\]?')
+Rall_postbiblio = re.compile(r'(bibliograph.?.?.?{.*}\n|bibliograph.?.?.?\n).*(?siu)')
 
-# créer la fiche qui contient tout les éléments amassés jusqu'à cette rupture (c'est à dire: créer la fiche correspondant à la section précédente)
-def EcrireSectionPrecedente(identifiant, taille, tailleMinimum, titreSection, ContenuTxtSection, ref_insection, nomAuteur, datecreation):
-    # print (identifiant + '\t' + str(taille))
-    if taille > tailleMinimum:
-        nomfichierFiche = 'pages/fiche' + identifiant + '.txt'
-        with open(nomfichierFiche, 'w', encoding = 'utf8') as fiche:
-            fiche.write('fiche n° '+ identifiant + '\n')
-            fiche.write('titre: ' + titreSection + '\n')
-            fiche.write('auteur: ' + nomAuteur + '\n')
-            fiche.write('date: ' + datecreation+ '\n\n\n')
-            contenujoin = '\n'.join(ContenuTxtSection)
-            contenujoin = re.sub(RnombreuxSauts, "\n", contenujoin)
-            contenujoin = re.sub(Rfootnote, "", contenujoin)
-            fiche.write(contenujoin)
-            fiche.write('\n\n\nRéférences associées: ' )
-            for identifiantRef in ref_insection.keys():
-                fiche.write(str(identifiantRef) + ' ')
-            fiche.close()
 
-def write_txt4ana(identifiant, titreSection, ContenuTxtSection):
-    with open("text4ana.txt", 'a', encoding = 'utf8') as text4ana:
-        text4ana.write('\n\nwxcv'+ identifiant + 'wxcv\n')
-        text4ana.write(titreSection+ '\n')
-        contenujoin = '\n'.join(ContenuTxtSection)
-        contenujoin = re.sub(RnombreuxSauts, "\n", contenujoin)
-        contenujoin = re.sub(Rfootnote, "", contenujoin)
-        text4ana.write(contenujoin)
+refdict = {}
+pictdict = {}
+pagesdict = {}
 
 
 
-def Image(thisline, nextline, RnamePict):
-    PictName = re.findall(RnamePict, thisline)
-    PictLegende = re.findall(RcaptionPict, nextline)
-    if not PictLegende:
-        PictLegende = ['Pas_de_legende']
-    return PictName[0], PictLegende[0]
+class Picture:
+    def __init__(self, line):
+        self.line = line
+        self.id = 0
+        self.file = ""
+        self.caption = ""
+        self.where = ""
 
-# Fonction pour enregistrer les footnotes en tant que références, placées de manière linéaires au fil du texte. Une même référence citée plusieurs fois, donnera lieu à plusieurs RefID (sale pratique d'écriture oblige)
-def References(thisline, ref_insection, dicorefs):
-    linereferences = re.findall(RcontenuFootnote, thisline) # attention il peut y avoir plusieurs footnote par ligne
-    linereferences += re.findall(RcontenuFootnotetext, thisline)
-    RefID = len(dicorefs.keys())
-    # en cas de ibid, ou op. cit. la tache devient compiquée...
-    #il y a ici une approximation qui consiste à reprendre la référence précédente. Mais impossible de savoir si l'utilisation de ladite reference et argumentée différement...
-    for refere in linereferences:
-        RefID += 1
-        if not re.search(RibidOpCit, refere):
-            dicorefs[RefID] = refere
-            ref_insection[RefID] = refere
-
-        elif re.search(RibidOpCit, refere):
-            # print('\nop.cit. ou ibid. found in footnote n°' + str(RefID) + ': check the result manualy please!')
-            versQuoi = re.findall(RopCitcontenu, refere)
-            versQuoi = versQuoi[0]
-            elements = re.findall(r'([A-Z][\w]*)(?u)', versQuoi)
-            Relements = r'\b' + '.{,4}'.join(elements) + r'\b(?iu)'
-            ref_prec = []
-            for value in dicorefs.values():
-                if re.search(Relements, value):
-                    ref_prec = value
-                    # print('####\nreferenceprecedente', ref_prec)
-                    break
-            # ref_prec = [value for key, value in dicorefs.items() if re.search(Relements, value)] # cherche dans le dico une valeur qui correpsond à ce qu'on à catché comme étant op. cité.
-            if ref_prec:
-                pages_now = re.findall(Rpages, refere) # catch les nombres ou espaces ou virgule ou tirets après p ou pp ou p. ou pp.
-                pages_prec = re.findall(Rpages, ref_prec)
-                if pages_now and pages_prec:
-                    ref_prec_mod = re.sub(Rpages, pages_now[0], ref_prec)
-                    dicorefs[RefID] = ref_prec_mod
-                    ref_insection[RefID] = ref_prec_mod
-                elif pages_now and not pages_prec:
-                    ref_prec_mod = ref_prec + pages_now[0]
-                    dicorefs[RefID] = ref_prec_mod
-                    ref_insection[RefID] = ref_prec_mod
-                elif not pages_now:
-                    dicorefs[RefID] = ref_prec
-                    ref_insection[RefID] = ref_prec
-
-            else:
-                print('NO REFERENCE FOUND FOR THIS ibidem: n°', RefID, '\ncontenant: ', refere)
-                ref = 'NO REFERENCE FOUND FOR THIS ibidem n°: ' + str(RefID) + '  contenant: ' + refere
-                dicorefs[RefID] = ref
-                ref_insection[RefID] = ref
-            # except:
-            #     print('op.cit ou ibid in footnote n°', str(RefID), 'cause problème, impossible de détécter ce à queoi cela se refere.')
-    return dicorefs, ref_insection
+    def getdata(self):
+        afile = re.findall(Rpictname, self.line)
+        self.file = afile[0]
+        acaption = re.findall(RcaptionPict, self.line)
+        if acaption:
+            self.caption = acaption[0]
+        else:
+            self.caption = None
 
 
 
-#########################################################
-##########################################################
-####fonction principale qui est appelée par LaTeX2Fiche
-def writePages_and_txt4ana(OrigineFile, conclusion, tailleMini, step, decoupeParagraphe, nom_auteur, date, DossierImage):
-    if os.path.isfile('text4ana.txt'):
-        os.remove('text4ana.txt') # remove the text written for ana in last session (otherwise it is being duplicated)
+
+
+class Reference:
+    def __init__(self, line):
+        self.hascontent = False
+        self.line = line
+        self.id = 0
+        self.content = ""
+        self.where = ""
+
+    def replaceopcit_incontent(self):
+        ''' automically porcessed.
+        modifies the content in the ref if this ref contains anything (op.cit. ibid. ...) pointing to a previous reference'''
+        target = re.findall(RopCitcontenu, self.content)
+        target = target[0]
+        elements = re.findall(r'([A-Z][\w]*)(?u)', target)
+        Relements = r'\b' + '.{,4}'.join(elements) + r'\b(?iu)'
+        print('elements', elements)
+        for ref in refdict:
+            if re.search(Relements, refdict[ref].content):
+                prev_ref = refdict[ref].content
+                print (prev_ref)
+            break
+        if ref_prec:
+            now_pagenum = re.findall(Rpages, self.content) # catch les nombres ou espaces ou virgule ou tirets après p ou pp ou p. ou pp.
+            prev_pagenum = re.findall(Rpages, prev_ref)
+            if now_pagenum and prev_pagenum:
+                self.content = re.sub(Rpages, now_pagenum[0], prev_ref)
+            elif now_pagenum and not prev_pagenum:
+                self.content = prev_ref + now_pagenum[0]
+        else:
+            print('NO REFERENCE FOUND FOR THIS ibidem: n°', self.id, '\ncontenant: ', self.content)
+            self.content = 'NO REFERENCE FOUND FOR THIS ibidem in ref n°: ' + str(self.id) + ' \tconaining: ' + self.content
+
+    def check(self):
+        if self.content:
+            self.hascontent = True
+
+    def getdata(self):
+        '''  fill the content of the ref instaance from the given textline '''
+        acontent = re.findall(RcontenuFootnote, self.line)
+        if not acontent:
+            acontent = re.findall(RcontenuFootnotetext, self.line)
+        if acontent:
+            self.content = acontent[0]
+        if re.search(RibidOpCit, self.content):
+            print('OP CIT FOUND ')
+            self.replaceopcit_incontent()
+        self.check()
+
+
+
+class Counter:
+    def __init__(self):
+        self.paragraphnum = 0
+        self.subsubsectionnum = 0
+        self.subsectionnum =  0
+        self.sectionnum =  0
+        self.pictnum = 0
+        self.refnum = 0
+
+    def pageincrement_get(self, level):
+        if level == 1:
+            self.sectionnum += 1
+            self.subsectionnum = 0
+            self.subsubsectionnum = 0
+            self.paragraphnum = 0
+        if level == 2:
+            self.subsectionnum += 1
+            self.subsubsectionnum = 0
+            self.paragraphnum = 0
+        if level == 3:
+            self.subsubsectionnum += 1
+            self.paragraphnum = 0
+        if level == 4:
+            self.paragraphnum += 1
+        pagenumber = str(self.sectionnum) + '_' + str(self.subsectionnum) + '_' + str(self.subsubsectionnum) + '_' + str(self.paragraphnum)
+        value = (self.paragraphnum, self.subsubsectionnum, self.subsectionnum, self.sectionnum, pagenumber)
+        return value
+
+    def increment_get(self, what):
+        if what == 'pict':
+            self.pictnum += 1
+            return self.pictnum
+        if what == 'ref':
+            self.refnum += 1
+            return self.refnum
+
+
+
+class Page:
+    def __init__(self, line, author, date_pub):
+        self.firstline = line
+        self.paragraphnum = 0
+        self.subsubsectionnum = 0
+        self.subsectionnum =  0
+        self.sectionnum =  0
+        self.number = ""
+        self.title = ""
+        self.text_rawcontent = ""
+        self.text_content = ""
+        self.refs = []
+        self.picts = []
+        self.author = author
+        self.date = date_pub
+        self.word_nb_page = 0
+        self.valid = False
+
+    def titling(self):
+        if r"paragraph" in self.firstline:
+            title = re.findall(Rtitreparagraph, self.firstline)
+            self.title = title[0]
+            return 4
+        if r"subsubsection" in self.firstline:
+            title = re.findall(Rtitresubsubsection, self.firstline)
+            self.title = title[0]
+            return 3
+        if r"subsection" in self.firstline:
+            title = re.findall(Rtitresubsection, self.firstline)
+            self.title = title[0]
+            return 2
+        if r"section" in self.firstline:
+            title = re.findall(Rtitresection, self.firstline)
+            self.title = title[0]
+            return 1
+
+    def numbering(self, args):
+        paragraphnum, subsubsectionnum, subsectionnum, sectionnum, pagenumber = args
+        self.sectionnum = sectionnum
+        self.subsectionnum = subsubsectionnum
+        self.subsubsectionnum = subsubsectionnum
+        self.paragraphnum = paragraphnum
+        self.number = pagenumber
+
+    def autoclean(self):
+        content = re.sub(Rfootnote, '', self.text_rawcontent)
+        content = re.sub(Rall_postbiblio, '', content)
+        content = re.sub(Rcaption, '', content)
+        content = re.sub(Ranycommand, '', content)
+        content = re.sub(r'\n\n+', '\n', content)
+        content = re.sub(r'\{.*\}', '', content)
+        self.text_content = content
+        self.word_nb_page = len(re.findall(r'(\w+)(?u)', self.text_content))
+
+    def __repr__(self):
+        # return "####\n page number: {}\n word count: {}\n page title: {}\n references : {}\n pictures: {}".format(self.number, self.word_nb_page, self.title, self.refs, self.picts)
+        if self.valid:
+            return "page # {}, created".format(self.number)
+        else:
+            return "page # {}, invalid (but created): too few words".format(self.number)
+
+    def json_obj(self):
+        data = {
+                'paragraphnum': self.paragraphnum,
+                'subsubsectionnum': self.subsubsectionnum,
+                'subsectionnum': self.subsectionnum,
+                'sectionnum': self.sectionnum,
+                'pagenumber': self.number,
+                'title': self.title,
+                'word_nb': self.word_nb_page,
+                'content' : self.text_content,
+                'references' : self.refs,
+                'pictures' : self.picts,
+                'author' : self.author,
+                'date' : self.date,
+                }
+        return data
+
+
+
+
+
+
+
+
+
+
+
+def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, decoupeParagraphe, author_name, date, DossierImage):
     #getting the last cleaned file
     OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
     OrigineFileName	= str(OrigineFileName[0])
     extensionEtapePrec = '.Step' + str(step-1) + '.txt'
-    FichierPropre = 'BeingClean/' + OrigineFileName + extensionEtapePrec
-    dicorefs = {}
-    dicopict = {}
-    Pict = {}
-    RefID = 0
-    if DossierImage == 'automatic': #pour retrouver le dossier Image tel que Writer2Latex le crée
-        DossierImage = re.sub('_', '', OrigineFileName)
-        DossierImage = DossierImage + '-img/'
-    RpictName = re.compile(r"(?<=\\includegraphics{" + re.escape(DossierImage) + r')(.*)(?=})', re.UNICODE) #recupère le nom de l'image (dans son dossier)
+    cleanfilename = 'BeingClean/' + OrigineFileName + extensionEtapePrec
+    author = author_name
+    date_pub = date
+    newpage = None
+    counter = Counter()
+    pagesordered = []
+    data = {}
 
-    with open(FichierPropre, 'r', encoding = 'utf8') as fichierpropre:
-        text = fichierpropre.readlines()
-
-        titre = " " #pour amorcer
-        ref_insection = {}
-        contenutxt = []
-        i = 0
-        sec = 0
-        subsec = 0
-        subsubsec = 0
-        parag = 0
-        NbMotsSect = 0
+    with open(cleanfilename, 'r', encoding = 'utf8') as text:
+        # text = cleanfile.readlines()
 
         for line in text:
-            i += 1
-            NbMotsSect +=  len(re.findall(r'(\w+)(?u)', line))
-            # NbMotsSect += CompteurMots(line)
-            if not decoupeParagraphe:
-                IDf = str(sec) + "_" + str(subsec) + "_" + str(subsubsec)
+            if re.match(r'(\\.*section)|(\\paragraph)', line):
+                if newpage:
+                    newpage.autoclean()
+                    if newpage.word_nb_page > mini_size:
+                        newpage.valid = True
+                    pagesordered.append(newpage.number)
+                    pagesdict[newpage.number] = newpage
+                newpage = Page(line, author, date_pub)
+                level = newpage.titling()
+                newpage.numbering(counter.pageincrement_get(level))
+
+            if re.match(r'\\includegraphics', line):
+                line = line + next(text)
+                newpict = Picture(line)
+                newpict.getdata()
+                newpict.where = newpage.number
+                newpict.id = counter.increment_get('pict')
+                pictdict[newpict.id] = newpict
+                newpage.picts.append(newpict.id)
+
+            if re.search(Rfootnote, line):
+                foottext = re.findall(Rfootnote, line)
+                for footnote in foottext:
+                    newref = Reference(footnote)
+                    newref.getdata()
+                    newref.id = counter.increment_get('ref')
+                    newref.where = newpage.number
+                    refdict[newref.id] = newref
+                    newpage.refs.append(newref.id)
+                newpage.text_rawcontent += line
+
             else:
-                IDf = str(sec) + "_" + str(subsec) + "_" + str(subsubsec) + "_" + str(parag)
+                if newpage:
+                    newpage.text_rawcontent += line
 
-            if "\includeg" in line:
-                PictName, PictLegende = Image(line, text[i], RpictName)
-                Pict[PictName] = PictLegende
-                dicopict.setdefault(IDf, {}).update(Pict)
-                del(Pict[PictName])
-                # dicopict[IDf][PictName] = PictLegende
+        if write_lastsection:
+            newpage.autoclean()
+            pagesdict[newpage.number] = newpage
 
-            if "\\footnote" in line:
-                dicorefs, ref_insection = References(line, ref_insection, dicorefs)
+    for pageobj in pagesordered:
+        print(pagesdict[pageobj])
 
-            #il y a une option pour découper les \paragraph en tant que sousoussoussection en cas de manuscrit mal structuré...
-            #sinon les \paragraph deviennent des paragraphes (avec saut de ligne tout simplement)
-            if not decoupeParagraphe:
-                if "\\paragraph" in line:
-                    titreparagraphe = re.findall(Rtitreparagraph, line)
-                    titreparagraphe = "\n" + titreparagraphe[0]
-                    contenutxt.append(titreparagraphe)
-            else:
-                if "\\paragraph" in line:
-                    write_txt4ana(IDf, titre, contenutxt)
-                    EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
-                    contenutxt = []
-                    ref_insection = {}
-                    NbMotsSect = 0
-                    ti = re.findall(Rtitreparagraph, line)
-                    titre = ti[0]
-                    parag += 1
+    with open('text4ana.txt', 'w', encoding = 'utf-8') as txt4ana:
+        for pagenum in pagesordered:
+            # txt4ana.write(pageobj.title)
+            txt4ana.write('\nwxcv' + pagesdict[pagenum].number + 'wxcv\n')
+            txt4ana.write(pagesdict[pagenum].title)
+            txt4ana.write(pagesdict[pagenum].text_content)
 
+    with open('pages/allpages.json', 'w', encoding = 'utf-8') as jsonpages:
+        for pagenum in pagesdict:
+            data[pagenum] = pagesdict[pagenum].json_obj()
+        json.dump(data, jsonpages, ensure_ascii=False, indent=4)
 
-            if line[0] != ("\\" or "%"): #capte les lignes de texte type 'contenu' mais pa les lignes commençant par \ (problème) ou par une ligne commentée %
-                contenutxt.append(line)
+    imagin = {}
+    with open('pages/images.json', 'w', encoding = 'utf-8') as imagesfile:
+        for pictid in pictdict:
+            imagin.setdefault(pictdict[pictid].where, {}).update({pictdict[pictid].file : pictdict[pictid].caption})
+        json.dump(imagin, imagesfile, ensure_ascii=False, indent=4)
 
-            if re.match(r'\\footnote', line): #capte les lignes qui commencent par une footnote (donc qui commencent par un \). C'est bizare mais ça existe
-                contenutxt.append(line)
-
-            if "\\section" in line:
-                write_txt4ana(IDf, titre, contenutxt)
-                EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
-                contenutxt = []
-                ref_insection = {}
-                NbMotsSect = 0
-                ti = re.findall(Rtitresection, line)
-                titre = ti[0]
-                sec += 1
-                subsec = 0
-                subsubsec = 0
-                parag = 0
-
-            if "\\subsection" in line:
-                write_txt4ana(IDf, titre, contenutxt)
-                EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
-                contenutxt = []
-                ref_insection = {}
-                NbMotsSect = 0
-                ti = re.findall(Rtitresubsection, line)
-                titre = ti[0]
-                subsec += 1
-                subsubsec = 0
-                parag = 0
-
-            if "\\subsubsection" in line:
-                write_txt4ana(IDf, titre, contenutxt)
-                EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
-                contenutxt = []
-                ref_insection = {}
-                NbMotsSect = 0
-                ti = re.findall(Rtitresubsubsection, line)
-                titre = ti[0]
-                subsubsec += 1
-                parag = 0
-
-            if conclusion in line:
-                write_txt4ana(IDf, titre, contenutxt)
-                EcrireSectionPrecedente(IDf, NbMotsSect, tailleMini, titre, contenutxt, ref_insection, nom_auteur, date)
-
-        with open('pages/references.json', 'w', encoding = 'utf8') as reffile:
-            json.dump(dicorefs, reffile, ensure_ascii=False, indent=4)
-        with open('pages/images.json', 'w', encoding = 'utf8') as pictfile:
-            json.dump(dicopict, pictfile, ensure_ascii=False, indent=4)
+    referin = {}
+    with open('pages/references.json', 'w', encoding = 'utf-8') as refsfile:
+        for refid in refdict:
+            referin[refid] = refdict[refid].content
+        json.dump(referin, refsfile, ensure_ascii=False, indent=4)
