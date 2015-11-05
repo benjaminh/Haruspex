@@ -68,19 +68,20 @@ class Reference:
         target = target[0]
         elements = re.findall(r'([A-Z][\w]*)(?u)', target)
         Relements = r'\b' + '.{,4}'.join(elements) + r'\b(?iu)'
-        print('elements', elements)
+        prev_ref = ''
         for ref in refdict:
             if re.search(Relements, refdict[ref].content):
                 prev_ref = refdict[ref].content
-                print (prev_ref)
-            break
-        if ref_prec:
+                break
+        if prev_ref:
             now_pagenum = re.findall(Rpages, self.content) # catch les nombres ou espaces ou virgule ou tirets après p ou pp ou p. ou pp.
             prev_pagenum = re.findall(Rpages, prev_ref)
             if now_pagenum and prev_pagenum:
                 self.content = re.sub(Rpages, now_pagenum[0], prev_ref)
             elif now_pagenum and not prev_pagenum:
                 self.content = prev_ref + now_pagenum[0]
+            else:
+                self.content = prev_ref
         else:
             print('NO REFERENCE FOUND FOR THIS ibidem: n°', self.id, '\ncontenant: ', self.content)
             self.content = 'NO REFERENCE FOUND FOR THIS ibidem in ref n°: ' + str(self.id) + ' \tconaining: ' + self.content
@@ -97,7 +98,7 @@ class Reference:
         if acontent:
             self.content = acontent[0]
         if re.search(RibidOpCit, self.content):
-            print('OP CIT FOUND ')
+            print('OP CIT FOUND in ref n°' + str(self.id))
             self.replaceopcit_incontent()
         self.check()
 
@@ -260,6 +261,7 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
             if re.match(r'\\includegraphics', line):
                 line = line + next(text)
                 newpict = Picture(line)
+                newpict.id = counter.increment_get('pict')
                 newpict.getdata()
                 newpict.where = newpage.number
                 newpict.id = counter.increment_get('pict')
@@ -270,8 +272,8 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
                 foottext = re.findall(Rfootnote, line)
                 for footnote in foottext:
                     newref = Reference(footnote)
-                    newref.getdata()
                     newref.id = counter.increment_get('ref')
+                    newref.getdata()
                     newref.where = newpage.number
                     refdict[newref.id] = newref
                     newpage.refs.append(newref.id)
