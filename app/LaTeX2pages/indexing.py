@@ -6,8 +6,8 @@ import re
 import json
 
 
-RcaptionPict = re.compile(r'(?<=\\caption{)([^}]*)(?=})', re.UNICODE) #recupère la légende de l'image
-Rcaption = re.compile(r'(\\caption)([^}]*})', re.UNICODE)
+RcaptionPict = re.compile(r'(?<=\\caption{)([^}]*)(?=})', re.UNICODE) #recupère la légende de l'image (contenu de caption)
+Rcaption = re.compile(r'(\\caption)([^}]*})', re.UNICODE) #récupère toute la commande caption
 Rfootnote = re.compile(r'(\\footnote[^}]*})', re.UNICODE) #récupere l'ensemble (la footnote) pour le supprimer
 RcontenuFootnote = re.compile(r'(?<=\\footnote{)([^}]*)(?=})', re.UNICODE) # recupère le contenu de la footnote
 RcontenuFootnotetext = re.compile(r'(?<=\\footnotetext{)([^}]*)(?=})', re.UNICODE) # recupère le contenu de la footnotetext
@@ -24,7 +24,7 @@ Rpages = re.compile(r'(\Wpp?\W?\W?[\d\s,-]+)', re.UNICODE) # catch les numéros 
 
 Ranycommand = re.compile(r'\\\w*\[?\{?[^\}|\]]*\}?\]?')
 Rall_postbiblio = re.compile(r'(bibliograph.?.?.?{.*}\n|bibliograph.?.?.?\n).*(?siu)')
-
+Rpictname = re.compile(r'(?<=\\includegraphics{)([^}]*)(?=})') # catch the picture name and its folder (the content of the includegraphics command)
 
 refdict = {}
 pictdict = {}
@@ -229,7 +229,7 @@ class Page:
 
 
 
-def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, decoupeParagraphe, author_name, date, DossierImage):
+def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, decoupeParagraphe, author_name, date):
     #getting the last cleaned file
     OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
     OrigineFileName	= str(OrigineFileName[0])
@@ -288,6 +288,7 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
     for pageobj in pagesordered:
         print(pagesdict[pageobj])
 
+#writing output files
     with open('text4ana.txt', 'w', encoding = 'utf-8') as txt4ana:
         for pagenum in pagesordered:
             # txt4ana.write(pageobj.title)

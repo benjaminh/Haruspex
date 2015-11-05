@@ -69,7 +69,6 @@ class Haruspex(QMainWindow):
     def pre_ana_window(self):
         self.odt_file = ''
         self.tex_file = ''
-        self.pict_folder = ''
         self.json_data = {}
 
         pre_ana_window_layout = QVBoxLayout(self.pre_ana_view)
@@ -134,26 +133,21 @@ class Haruspex(QMainWindow):
     def pre_ana_dir_open(self):
         project_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
         self.project_dir_edit.setText(project_dir)
+        self.project_directory = self.project_dir_edit.text()
+        self.text4ana_edit.setText(self.project_directory+"/text4ana.txt")
 
         # Récupération du fichier .tex
-        for dirpath, dirnames, files in os.walk(self.project_dir_edit.text()):
+        for dirpath, dirnames, files in os.walk(self.project_directory):
             for name in files:
                 if name.lower().endswith(".tex"):
                     self.tex_file = os.path.join(dirpath, name)
                 elif name.lower().endswith(".odt"):
                     self.odt_file = os.path.join(dirpath, name)
             # si pas de .tex mais .odt dans le dossier: silent conversion
-            if self.tex_file == '':
+            if not self.tex_file and self.odt_file:
                 self.tex_file = self.writer2latex(self.odt_file)
-                self.pict_folder = [folder for folder in os.listdir(dirpath) if folder.endswith("-img")][0]
                 del self.odt_file
-            for dirname in dirnames:
-                if dirname.lower().endswith("-img"):
-                    self.pict_folder = dirname
-        self.json_data.update({'project_path': self.project_dir_edit.text(), 'texfile_path': self.tex_file, 'pict_folder': self.pict_folder})
-
-        self.project_directory = self.project_dir_edit.text()
-        self.text4ana_edit.setText(self.project_directory+"/text4ana.txt")
+        self.json_data.update({'project_path': self.project_directory, 'texfile_path': self.tex_file})
 
         self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
@@ -170,11 +164,11 @@ class Haruspex(QMainWindow):
             self.validate_label.setText("Paramètres enregistrés")
 
     def pre_ana(self):
-        pre_ana_dir = os.path.join(self.project_dir_edit.text(), os.pardir, "app/LaTeX2pages")
+        pre_ana_dir = os.path.join(self.project_directory, os.pardir, "app/LaTeX2pages")
         pre_ana_main_path = os.path.join(pre_ana_dir, 'Latex2pages.py')
         origWD = os.getcwd() # remember our original working directory
         os.chdir(pre_ana_dir)
-        subprocess.call(['python3', pre_ana_main_path, self.project_dir_edit.text()])
+        subprocess.call(['python3', pre_ana_main_path, self.project_directory])
         os.chdir(origWD)
 
     ###############################################
@@ -257,6 +251,10 @@ class Haruspex(QMainWindow):
             self.ana_thresholds_dict.update(picked_thresholds)
 
     def ana_config_save(self, bootstrap):
+        print('PROJET', self.project_directory, '\nself.text4ana_edit.text()', self.text4ana_edit.text())
+        if not self.project_directory:
+            self.project_directory = os.path.dirname(self.text4ana_edit.text())
+        print('PROJET', self.project_directory, '\nself.text4ana_edit.text()', self.text4ana_edit.text())
         with open(self.project_directory+"/bootstrap", "w", encoding = 'utf8') as outfile:
             outfile.write(bootstrap)
             outfile.close()
@@ -267,7 +265,8 @@ class Haruspex(QMainWindow):
                 analoops = int(self.ana_loops.text())
             self.ana_config_json = {"linkwords_file_path": self.ana_directory + "/french/schema",
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
-            "txt_file_path": self.project_directory + "/text4ana.txt",
+            # "txt_file_path": self.project_directory + "/text4ana.txt",
+            "txt_file_path": self.text4ana_edit.text(),
             "bootstrap_file_path": "bootstrap",
             "automaticsteps": self.ana_autoloop.isChecked(),
             "global_steps": analoops}
@@ -281,7 +280,7 @@ class Haruspex(QMainWindow):
         ana_main_path = os.path.join(ana_main, 'ana_main.py')
         origWD = os.getcwd() # remember our original working directory
         os.chdir(ana_main)
-        subprocess.call(['python3', ana_main_path, self.project_dir_edit.text()])
+        subprocess.call(['python3', ana_main_path, self.project_directory])
         os.chdir(origWD)
 
     ###############################################

@@ -17,7 +17,6 @@ os.chdir(path)
 
 Auteur_du_document = config['author']
 Date_de_publication_du_document = config['publi_date']
-DossierImage = config['pict_folder'] # écrire 'automatic' si le LaTeX provient de Writer2Latex. Sinon mettre le nom du dossier où sont rangées les images.
 write_lastsection = config['write_lastsection']# pour écrire ou non la conclusion...
 
 ##Options:
@@ -37,5 +36,5 @@ etape += CleanLaTeX.AcoladeClose(Fichier_a_traiter, etape)
 if close_squarebrackets:
 	etape += CleanLaTeX.CrochetClose(Fichier_a_traiter, etape)
 etape += CleanLaTeX.Clean(Fichier_a_traiter, etape)
-indexing.writePages_and_txt4ana(Fichier_a_traiter, write_lastsection, mini_size, etape, decoupe_paragraphe, Auteur_du_document, Date_de_publication_du_document, DossierImage)
+indexing.writePages_and_txt4ana(Fichier_a_traiter, write_lastsection, mini_size, etape, decoupe_paragraphe, Auteur_du_document, Date_de_publication_du_document)
 print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/pages/ directory')
