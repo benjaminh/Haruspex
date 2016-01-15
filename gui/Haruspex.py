@@ -22,6 +22,7 @@ class Haruspex(QMainWindow):
 
         self.project_directory = ''
         self.ana_directory = ''
+        self.preANA_dir = 'preANA'
 
         self.create_menu()
 
@@ -67,7 +68,8 @@ class Haruspex(QMainWindow):
     ###############################################
 
     def pre_ana_window(self):
-        self.odt_file = ''
+        self.odt_files = set()
+        self.tex_files = set()
         self.tex_file = ''
         self.json_data = {}
 
@@ -122,33 +124,52 @@ class Haruspex(QMainWindow):
 
 
     # silent conversion of odt file into minimal tex
-    def writer2latex(self, odt_file):
+    def writer2latex(self):
+        # si pas de .tex mais .odt dans le dossier: silent conversion
         w2l_dir = os.path.join(self.project_dir_edit.text(), os.pardir, os.path.join('app','writer2latex'))
+        origWD = os.getcwd() #remember original WorkingDirectory
         os.chdir(w2l_dir)
-        arguments = ['-config', os.path.join('config', 'preANA.xml'), odt_file]
-        subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
-        tex_file = re.sub(r'odt$', 'tex', odt_file)
-        return tex_file
+        for odt_file in self.odt_files:
+            tex_name = re.sub(r'odt$', 'tex', odt_file)
+            if os.path.isfile(tex_name):
+                print('warning 2 files have the same name', odt_file, tex_name)
+            else:
+                arguments = ['-config', os.path.join('config', 'preANA.xml'), odt_file, os.path.join(self.preANA_dir, tex_name)]
+                subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
+                self.tex_files.add(os.path.join(self.preANA_dir, tex_name))
+
+    def concatenate(self):
+        concat_path = os.path.join(self.project_dir_edit.text(), os.path.join(self.preANA_dir,'concat.tex'))
+        with open(concat_path, 'w') as concat_file:
+            for tex_name in self.tex_files:
+                with open(tex_name) as infile:
+                    for line in infile:
+                        concat_file.write(line)
+        self.tex_file = concat_path
 
     def pre_ana_dir_open(self):
         project_dir = QFileDialog.getExistingDirectory(self, 'Ouvrir un dossier')
         self.project_dir_edit.setText(project_dir)
         self.project_directory = self.project_dir_edit.text()
-        self.text4ana_edit.setText(self.project_directory+"/text4ana.txt")
+        self.text4ana_edit.setText(os.path.join(self.project_directory, "text4ana.txt"))
+        print(self.project_directory)
+        if not os.path.exists(os.path.join(self.project_directory,'preANA')):
+            os.mkdir(os.path.join(self.project_directory,'preANA'))
 
-        # Récupération du fichier .tex
+        # Récupération des fichiers d'entrée
         for dirpath, dirnames, files in os.walk(self.project_directory):
             for name in files:
                 if name.lower().endswith(".tex"):
-                    self.tex_file = os.path.join(dirpath, name)
+                    self.tex_files.add(os.path.join(dirpath, name))
                 elif name.lower().endswith(".odt"):
-                    self.odt_file = os.path.join(dirpath, name)
-            # si pas de .tex mais .odt dans le dossier: silent conversion
-            if not self.tex_file and self.odt_file:
-                self.tex_file = self.writer2latex(self.odt_file)
-                del self.odt_file
+                    self.odt_files.add(os.path.join(dirpath, name))
+        if self.odt_files:# si .odt dans le dossier: silent conversion
+            self.writer2latex()
+        if len(self.tex_files) > 1:# concatene les fichiers tex en 1 seul fichier pour ana
+            self.concatenate()
+        else:
+            self.tex_file = self.tex_files.pop()
         self.json_data.update({'project_path': self.project_directory, 'texfile_path': self.tex_file})
-
         self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
     def pre_ana_validate(self, project_dir):
@@ -166,10 +187,11 @@ class Haruspex(QMainWindow):
     def pre_ana(self):
         pre_ana_dir = os.path.join(self.project_directory, os.pardir, "app/LaTeX2pages")
         pre_ana_main_path = os.path.join(pre_ana_dir, 'Latex2pages.py')
-        origWD = os.getcwd() # remember our original working directory
+        # origWD = os.getcwd() # remember our original working directory
         os.chdir(pre_ana_dir)
         subprocess.call(['python3', pre_ana_main_path, self.project_directory])
-        os.chdir(origWD)
+        # os.chdir(origWD)
+        os.chdir(self.project_directory)
 
     ###############################################
     # Onglet de configuration et d'execution d'ANA
@@ -267,7 +289,7 @@ class Haruspex(QMainWindow):
             "stopword_file_path": self.ana_directory + "/french/stoplist_Fr.txt",
             # "txt_file_path": self.project_directory + "/text4ana.txt",
             "txt_file_path": self.text4ana_edit.text(),
-            "bootstrap_file_path": "bootstrap",
+            "bootstrap_file_path": self.project_directory+"/bootstrap",
             "automaticsteps": self.ana_autoloop.isChecked(),
             "global_steps": analoops}
             self.ana_config_json.update(self.ana_thresholds_dict)

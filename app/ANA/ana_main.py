@@ -9,8 +9,9 @@ import os
 import ntpath
 import json
 import ana_postprocessing
+import time
 
-
+begin_time = time.time()
 config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
 # config = json.loads(open('/home/matthieu/MEGAsync/IRCCyN/projets/Haruspex/projet2/ana_config.json').read())
 
@@ -77,6 +78,7 @@ while not stop:
     for nucleus_steps in range(1, nucleus_steps):
         ana_useful.write_log(log_file_path,"\n\n########################################\n")
         ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
+        # ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
         ana_useful.write_log(log_file_path,"########################################\n")
         dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, nucleus_threshold, log_file_path)
         ana_useful.conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
@@ -101,6 +103,7 @@ while not stop:
     cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
     diff = len(cands)-old_len_cands
     print('Variation du nombre de candidats :', diff)
+    print('TIME', time.time()-begin_time)
     print('CANDIDATS \n' , cands)
 
     if automaticsteps and diff == 0:

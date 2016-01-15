@@ -258,7 +258,7 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
                 level = newpage.titling()
                 newpage.numbering(counter.pageincrement_get(level))
 
-            if re.match(r'\\includegraphics', line):
+            if re.search(r'\\includegraphics', line) and newpage:
                 line = line + next(text)
                 newpict = Picture(line)
                 newpict.id = counter.increment_get('pict')
@@ -268,7 +268,7 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
                 pictdict[newpict.id] = newpict
                 newpage.picts.append(newpict.id)
 
-            if re.search(Rfootnote, line):
+            if re.search(Rfootnote, line) and newpage:
                 foottext = re.findall(Rfootnote, line)
                 for footnote in foottext:
                     newref = Reference(footnote)
@@ -279,7 +279,7 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
                     newpage.refs.append(newref.id)
                 newpage.text_rawcontent += line
 
-            else:
+            elif newpage:
                 if newpage:
                     newpage.text_rawcontent += line
 
@@ -291,7 +291,8 @@ def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, deco
         print(pagesdict[pageobj])
 
 #writing output files
-    with open('text4ana.txt', 'w', encoding = 'utf-8') as txt4ana:
+    parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+    with open(os.path.join(parent_dir, 'text4ana.txt'), 'w', encoding = 'utf-8') as txt4ana:
         for pagenum in pagesordered:
             # txt4ana.write(pageobj.title)
             txt4ana.write('\nwxcv' + pagesdict[pagenum].number + 'wxcv\n')

@@ -31,8 +31,10 @@ Rindex = re.compile(r'(\\index{[^}]*})') # recupère l'ensemble de la commande i
 def AcoladeClose(OrigineFile, step):
     with open(OrigineFile, 'r', encoding = 'utf8') as fichierOrigine:
         texteO = fichierOrigine.readlines()
-        OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
-        OrigineFileName    = str(OrigineFileName[0])
+        base = os.path.basename(OrigineFile)
+        OrigineFileName = os.path.splitext(base)[0]
+        # OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
+        # OrigineFileName    = str(OrigineFileName[0])
         extensionEtape = '.Step' + str(step) + '.txt'
         FileStep1 = 'BeingClean/' + OrigineFileName + extensionEtape
         with open(FileStep1, "w", encoding = 'utf8') as filestep1:
@@ -41,7 +43,6 @@ def AcoladeClose(OrigineFile, step):
                 if "\end{document}" not in texteO[i]:
                     i += 1
                     ligneO = texteO[i]
-
                     if "{" in ligneO:
                         compteur = len(re.findall("{", ligneO))
                         compteurF = len(re.findall("}", ligneO))
