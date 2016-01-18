@@ -100,7 +100,7 @@ class Haruspex(QMainWindow):
         self.sheet_min_size.setValidator(size_validator)
         form_layout.addRow("&Taille minimum des fiches (en mots)", self.sheet_min_size)
         self.write_lastsection = QCheckBox()
-        form_layout.addRow("&Écrire la dernière section?", self.write_lastsection)
+        form_layout.addRow("&Écrire la dernière section?\n(toujours vrai si plusieurs fichier)", self.write_lastsection)
         self.author = QLineEdit()
         self.author.setPlaceholderText("Bertrand Dumas")
         form_layout.addRow("&Auteur", self.author)
@@ -167,14 +167,16 @@ class Haruspex(QMainWindow):
             self.writer2latex()
         if len(self.tex_files) > 1:# concatene les fichiers tex en 1 seul fichier pour ana
             self.concatenate()
+            write_lastsection == True
         else:
             self.tex_file = self.tex_files.pop()
+            write_lastsection == self.write_lastsection.isChecked()
         self.json_data.update({'project_path': self.project_directory, 'texfile_path': self.tex_file})
         self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", 'w', encoding = 'utf-8') as outfile:
-            params = {'write_lastsection': self.write_lastsection.isChecked(),
+            params = {'write_lastsection': write_lastsection,
             'author': self.author.text(),
             'publi_date': self.date_pub,
             'paragraph_cut': self.cut_paragraphs.isChecked(),
