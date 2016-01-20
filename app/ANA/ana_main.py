@@ -63,6 +63,7 @@ with open(log_file_path, 'w', encoding = 'utf8') as logfile:
     ana_useful.write_log(log_file_path,"FICHIER LOG\n")
     ana_useful.write_log(log_file_path,"ANALYSE DU FICHIER : " + txt_file_path + "\n")
     ana_useful.write_log(log_file_path,"BOOTSTRAP : " + str(cands) + "\n")
+    ana_useful.write_log(log_file_path,"\n\nTraitement démarré le " + time.strftime("%c") + " \n")
     ana_useful.write_log(log_file_path,"########################################\n")
 
 stop = False
@@ -81,7 +82,9 @@ while not stop:
         # ana_useful.write_log(log_file_path, 'passe __ n°' + str(nb_passe) + " RECHERCHE DE NOYAUX\n")
         ana_useful.write_log(log_file_path,"########################################\n")
         dict_nucleus = ana_collect.nucleus_search(dict_occ_ref, cands, nucleus_threshold, log_file_path)
+        print('\n\n\n################# RECHERCHE TERMINEE, GESTION DES CONFLITS #################\n')
         ana_useful.conflict_manager(dict_occ_ref, dict_nucleus, dict_expa, dict_expre, recession_threshold, log_file_path)
+        print('\n\n\n################# CONFLITS TERMINES, RECESSION #################\n')
         cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
 
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
@@ -113,6 +116,7 @@ while not stop:
         stop = True
 
 ana_useful.write_output(cands, dict_occ_ref)
-print('\n\n\n##################################################\n#################### END #########################\noutput files have been created in yourproject/output/ directory')
+print('\n\n\n##################################################\n#################### END #########################\nTraitement terminée le ' + time.strftime("%c") + '\n')
+print('output files have been created in yourproject/output/ directory')
 with open('output/dict_occ_ref.json', 'w') as json_dict_occ_ref:
     json.dump(dict_occ_ref, json_dict_occ_ref, ensure_ascii=False, indent=4)

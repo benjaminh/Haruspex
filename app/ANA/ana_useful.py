@@ -357,6 +357,7 @@ def where_R_nucleus(dict_occ_ref, cand_shape):
         if ((value[1] == 't') and (egal_sple_term(value[0], cand_shape))): # Test on 't' word to avoid catching 'v' words (ie. 'il') for a candidate (ie. 'île')
             occurence = [position, value[0], value[1], value[2]]
             occ_list.append(occurence)
+            print('\n\n\n################# ' + str(occurence[0]) + ' #################\n')
     return occ_list
 
 

@@ -23,6 +23,8 @@ class Haruspex(QMainWindow):
         self.project_directory = ''
         self.ana_directory = ''
         self.preANA_dir = 'preANA'
+        # Table d'association pour la concaténation des fichiers sources dans le cas d'un corpus
+        self.concat_files_list = dict()
 
         self.create_menu()
 
@@ -141,10 +143,14 @@ class Haruspex(QMainWindow):
     def concatenate(self):
         concat_path = os.path.join(self.project_dir_edit.text(), os.path.join(self.preANA_dir,'concat.tex'))
         with open(concat_path, 'w') as concat_file:
+            i = 0
             for tex_name in self.tex_files:
+                concat_file.write('wxcv' + i + 'wxcv')
+                self.concat_files_list[i] = tex_name
                 with open(tex_name) as infile:
                     for line in infile:
                         concat_file.write(line)
+                    i += 1
         self.tex_file = concat_path
 
     def pre_ana_dir_open(self):
