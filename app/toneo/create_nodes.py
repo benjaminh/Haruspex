@@ -65,24 +65,33 @@ def ficheDocumentation(fiche, type_doc, dossier, nom_fichier, graph):
                     fiche.create_doc(graph, reference_trouvee, '')
 
 
-def main(dossier, ignore_files):
+def main(project_directory, ignore_files):
     authenticate("localhost:7474", "neo4j", "haruspex")
     graph_db = Graph()
+    dossier = os.path.join(project_directory + "/pages")
 
-    # Pour chaque fiche, analyser son contenu
-    # et créer les noeuds/liens correspondants
-    files = [f for f in listdir(dossier) if isfile(join(dossier, f))]
+    if os.path.exists(dossier):
+        # Pour chaque fiche, analyser son contenu
+        # et créer les noeuds/liens correspondants
+        files = [f for f in listdir(dossier) if isfile(join(dossier, f))]
 
-    for fiche in files:
-        if (fiche not in ignore_files):
-            fiche_analysee = analyseFiche(fiche, dossier, graph_db)
-            ficheDocumentation(fiche_analysee, "references", dossier,
-                               ignore_files[0], graph_db)
-            ficheDocumentation(fiche_analysee, "images", dossier,
-                               ignore_files[1], graph_db)
+        for fiche in files:
+            if (fiche not in ignore_files):
+                fiche_analysee = analyseFiche(fiche, dossier, graph_db)
+                ficheDocumentation(fiche_analysee, "references", dossier,
+                                   ignore_files[0], graph_db)
+                ficheDocumentation(fiche_analysee, "images", dossier,
+                                   ignore_files[1], graph_db)
+    else:
+        files = [f for f in listdir(project_directory) if (isfile(join(project_directory, f)) and f.endswith('.txt'))]
+        #TODO récupérer les métadonnées d'omeka sur les documents
+        for document in files:
+            print(document.strip(project_directory))
+            fiche = Fiche(document.replace(project_directory,'').replace('.txt', ''), '', '',
+                          '', '', '')
+            fiche.create_node(graph_db)
 
 if __name__ == "__main__":
     project_directory = sys.argv[1]
-    dossier = os.path.join(project_directory + "/pages")
     ignore_files = ["references", "images"]
-    main(dossier, ignore_files)
+    main(project_directory, ignore_files)

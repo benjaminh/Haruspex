@@ -29,7 +29,10 @@ class Fiche(object):
         fiche_node = Node.cast(fiche_properties)
         fiche_node.labels.add(self.node_type)
         self._node = fiche_node
-        graph_db.create(self._node)
+        try:
+            graph_db.create(self._node)
+        except:
+            print('Erreur : noeud '+ self.tmp_id +'non créé')
 
     def create_rel(self, graph_db, fiche_liee, complement, ponderation):
         rel = Relationship.cast(self.node, ("correle_a",

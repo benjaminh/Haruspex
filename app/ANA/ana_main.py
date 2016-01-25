@@ -87,6 +87,7 @@ while not stop:
         print('\n\n\n################# CONFLITS TERMINES, RECESSION #################\n')
         cands = ana_useful.recession(dict_occ_ref, recession_threshold, log_file_path)
 
+    print('\n\n\n################# passe n°' + str(nb_passe) + " RECHERCHE D'EXPANSIONS #################\n")
     ana_useful.write_log(log_file_path,"\n\n########################################\n")
     ana_useful.write_log(log_file_path,'passe n°' + str(nb_passe) + " RECHERCHE D'EXPANSIONS\n")
     ana_useful.write_log(log_file_path,"########################################\n")
@@ -117,6 +118,7 @@ while not stop:
 
 ana_useful.write_output(cands, dict_occ_ref)
 print('\n\n\n##################################################\n#################### END #########################\nTraitement terminée le ' + time.strftime("%c") + '\n')
+ana_useful.write_log(log_file_path,"\n\nTraitement terminé le " + time.strftime("%c") + " \n")
 print('output files have been created in yourproject/output/ directory')
 with open('output/dict_occ_ref.json', 'w') as json_dict_occ_ref:
     json.dump(dict_occ_ref, json_dict_occ_ref, ensure_ascii=False, indent=4)

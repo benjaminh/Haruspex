@@ -74,6 +74,7 @@ class Haruspex(QMainWindow):
         self.tex_files = set()
         self.tex_file = ''
         self.json_data = {}
+        self.write_lastsection = ''
 
         pre_ana_window_layout = QVBoxLayout(self.pre_ana_view)
         top_layout = QGridLayout()
@@ -101,8 +102,8 @@ class Haruspex(QMainWindow):
         size_validator = QIntValidator()
         self.sheet_min_size.setValidator(size_validator)
         form_layout.addRow("&Taille minimum des fiches (en mots)", self.sheet_min_size)
-        self.write_lastsection = QCheckBox()
-        form_layout.addRow("&Écrire la dernière section?\n(toujours vrai si plusieurs fichier)", self.write_lastsection)
+        self.write_lastsection_cb = QCheckBox()
+        form_layout.addRow("&Écrire la dernière section?\n(toujours vrai si plusieurs fichier)", self.write_lastsection_cb)
         self.author = QLineEdit()
         self.author.setPlaceholderText("Bertrand Dumas")
         form_layout.addRow("&Auteur", self.author)
@@ -141,16 +142,24 @@ class Haruspex(QMainWindow):
                 self.tex_files.add(os.path.join(self.preANA_dir, tex_name))
 
     def concatenate(self):
+        # TODO Vérifier que le fichier n'existe pas déjà car sinon, il s'ajoute aux fichiers pris en compte
         concat_path = os.path.join(self.project_dir_edit.text(), os.path.join(self.preANA_dir,'concat.tex'))
+        print('Nombre de fichiers concaténés : ' + str(len(self.tex_files)) + '\n')
         with open(concat_path, 'w') as concat_file:
+            # TODO assurer la connexion entre les marqueurs et les noms de fichiers (quitte à les renommer)
             i = 0
             for tex_name in self.tex_files:
-                concat_file.write('wxcv' + i + 'wxcv')
+                concat_file.write('wxcv' + str(i) + 'wxcv\n')
                 self.concat_files_list[i] = tex_name
                 with open(tex_name) as infile:
-                    for line in infile:
-                        concat_file.write(line)
-                    i += 1
+                    concat_file.write(infile.read())
+                    infile.close()
+                # TODO vérifier que le fichier n'existe pas déjà
+                with open(os.path.join(self.project_directory,'output/assoc_files.csv'), 'a') as assoc_files:
+                    # Attention strip retire les caractères présents dans la chaine de caractère en paramètre
+                    # TODO vérifier que le nom de fichier enregistré correspond bien à un fichier existant !! (cas où il manquait des lettres au début et à la fin genre e ou c)
+                    assoc_files.write(str(i) + ';' + tex_name.replace(self.project_directory, '').replace('.txt', '') + '\n')
+                i += 1
         self.tex_file = concat_path
 
     def pre_ana_dir_open(self):
@@ -165,7 +174,7 @@ class Haruspex(QMainWindow):
         # Récupération des fichiers d'entrée
         for dirpath, dirnames, files in os.walk(self.project_directory):
             for name in files:
-                if name.lower().endswith(".tex"):
+                if name.lower().endswith(".tex") or name.lower().endswith(".txt"):
                     self.tex_files.add(os.path.join(dirpath, name))
                 elif name.lower().endswith(".odt"):
                     self.odt_files.add(os.path.join(dirpath, name))
@@ -173,16 +182,16 @@ class Haruspex(QMainWindow):
             self.writer2latex()
         if len(self.tex_files) > 1:# concatene les fichiers tex en 1 seul fichier pour ana
             self.concatenate()
-            write_lastsection == True
+            self.write_lastsection == True
         else:
             self.tex_file = self.tex_files.pop()
-            write_lastsection == self.write_lastsection.isChecked()
+            self.write_lastsection == self.write_lastsection_cb.isChecked()
         self.json_data.update({'project_path': self.project_directory, 'texfile_path': self.tex_file})
         self.ana_output_edit.setText(self.project_directory+"/output/context.json")
 
     def pre_ana_validate(self, project_dir):
         with open(project_dir+"/L2P_config.json", 'w', encoding = 'utf-8') as outfile:
-            params = {'write_lastsection': write_lastsection,
+            params = {'write_lastsection': self.write_lastsection,
             'author': self.author.text(),
             'publi_date': self.date_pub,
             'paragraph_cut': self.cut_paragraphs.isChecked(),

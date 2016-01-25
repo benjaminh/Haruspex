@@ -7,7 +7,7 @@ import os
 import re
 import distance
 import copy
-from collections import Counter
+from collections import Counter, OrderedDict
 
 #paramètre globaux ou initialisation#############################
 seuil_egal_sple = 8

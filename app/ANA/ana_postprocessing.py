@@ -19,18 +19,19 @@ import os, sys
 from collections import Counter, defaultdict
 
 def post_supervisedkeys():
-    modifs = json.loads(open('output/modified_keywords.json').read())
     change_keys = {}
     make_keys = set() # a set is better in case of duplicates and provides a faster access to check
     remove_keys = set()
-    for key in modifs:
-        if modifs[key]['modification'] == 'modifie':
-            if '\\' not in modifs[key]["nouveau_mot_cle"]:
-                change_keys[key] = modifs[key]["nouveau_mot_cle"]
-        if modifs[key]['modification'] == 'ajoute':
-            make_keys.add(key)
-        if modifs[key]['modification'] == 'supprime':
-            remove_keys.add(key)
+    if os.path.exists('output/modified_keywords.json') and os.stat("output/modified_keywords.json").st_size:
+        modifs = json.loads(open('output/modified_keywords.json').read())
+        for key in modifs:
+            if modifs[key]['modification'] == 'modifie':
+                if '\\' not in modifs[key]["nouveau_mot_cle"]:
+                    change_keys[key] = modifs[key]["nouveau_mot_cle"]
+            if modifs[key]['modification'] == 'ajoute':
+                make_keys.add(key)
+            if modifs[key]['modification'] == 'supprime':
+                remove_keys.add(key)
     return change_keys, make_keys, remove_keys
 
 
@@ -145,22 +146,28 @@ def main(project_directory):
     dict_bykey = defaultdict(list)
 
     change_keys, make_keys, remove_keys = post_supervisedkeys() # get the user preferences from a csv file
+    # TODO marqueur ci-dessous à adapter dans le cas d'un corpus sans sous-structure
     page_number = '0_0_0'
+    dict_occ_ref_2 = {int(k):v for k,v in dict_occ_ref.items()}
     #TODO verifier que la fonction sorted fonctionne bien.
-    for pos in sorted(dict_occ_ref):
-        value = dict_occ_ref[pos]
-        if value[1] == 'v':
-            if re.match(r'wxcv[\d|_]*wxcv', value[0]):
-                page_num = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
-                page_number = page_num[0]
-                #keypage_name = 'output/keyword_pages/page' + page_number[0] + '.key'
-        if value[1] not in ['v', 't'] and value[1] not in remove_keys: #catch cands except removed by user ones.
-                if value[1] in change_keys:
-                    keyword = change_keys[value[1]] # rename the keyword with the user defined one
-                else:
-                    keyword = value[1]
-                dict_bypage[page_number].append(keyword) #page_number:keywords in page
-                dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
+    for pos in range(1, max(dict_occ_ref_2, key=int)):
+        if pos in dict_occ_ref_2:
+            value = dict_occ_ref_2[pos]
+            if value[1] == 'v':
+                if re.match(r'wxcv[\d|_]*wxcv', value[0]):
+                    page_num = re.findall(r'(?<=wxcv)([\d|_]*)(?=wxcv)', value[0])
+                    page_number = page_num[0]
+                    #keypage_name = 'output/keyword_pages/page' + page_number[0] + '.key'
+            if value[1] not in ['v', 't'] and value[1] not in remove_keys: #catch cands except removed by user ones.
+                    if value[1] in change_keys:
+                        keyword = change_keys[value[1]] # rename the keyword with the user defined one
+                    else:
+                        keyword = value[1]
+                    if (page_number == '0_0_0'):
+                        with open('output/test', 'a') as f_test:
+                            f_test.write(pos+'\n')
+                    dict_bypage[page_number].append(keyword) #page_number:keywords in page
+                    dict_bykey[keyword].append(page_number)  #keywords:pages where it is present
 
     if make_keys:
         make_keyword(make_keys)

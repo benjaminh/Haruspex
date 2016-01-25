@@ -42,7 +42,10 @@ def expansion_cand_search(valid_windows, expansion_threshold):
                 shape += occurrence[1] + ' '
             shape.strip()
         dict_cand_windows.setdefault(shape,[]).append(window)
+    print('\n\n\n################# RECHERCHE EXPANSIONS : DEBUT RECHERCHE CANDIDATS #################\n')
+    # TODO Note : L'étape suivante est TRES longue
     dict_cand_windows_norm = ana_useful.merge_egal_sple_dictkeys(dict_cand_windows)
+    print('\n\n\n################# RECHERCHE EXPANSIONS : FIN RECHERCHE CANDIDATS #################\n')
 
     # Vérification du dépassement de seuil, expansion est une "expansion potentielle" avant d'être validée et insérée dans le final_dict
     final_dict = {}
