@@ -30,7 +30,13 @@ class Fiche(object):
         fiche_node.labels.add(self.node_type)
         self._node = fiche_node
         try:
-            graph_db.create(self._node)
+            temp = graph_db.merge_one(self.node_type, 'doc_position', self.tmp_id)
+            if temp is not None:
+                temp['titre'] = self.titre
+                temp['auteur'] = self.auteur
+                temp['contenu'] = self.contenu
+                temp['date_creation'] = self.date_creation
+                temp.push()
         except:
             print('Erreur : noeud '+ self.tmp_id +'non créé')
 

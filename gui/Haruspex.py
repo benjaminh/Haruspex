@@ -155,10 +155,13 @@ class Haruspex(QMainWindow):
                     concat_file.write(infile.read())
                     infile.close()
                 # TODO vérifier que le fichier n'existe pas déjà
-                with open(os.path.join(self.project_directory,'output/assoc_files.csv'), 'a') as assoc_files:
+                if not os.path.exists(os.path.join(self.project_directory, 'output')):
+                    os.makedirs(os.path.join(self.project_directory, 'output'))
+                assoc_file_path = os.path.join(self.project_directory,'output/assoc_files')
+                with open(assoc_file_path, 'a+') as assoc_files:
                     # Attention strip retire les caractères présents dans la chaine de caractère en paramètre
                     # TODO vérifier que le nom de fichier enregistré correspond bien à un fichier existant !! (cas où il manquait des lettres au début et à la fin genre e ou c)
-                    assoc_files.write(str(i) + ';' + tex_name.replace(self.project_directory, '').replace('.txt', '') + '\n')
+                    assoc_files.write(str(i) + ';' + tex_name.replace(self.project_directory + '/', '').replace('.txt', '') + '\n')
                 i += 1
         self.tex_file = concat_path
 

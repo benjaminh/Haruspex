@@ -30,17 +30,22 @@ def analyseRelations(nom_fichier, dossier, graph):
 
 def creationLiens(motcle, fiche_id, fiche_liee_id, poids, graph):
     # Récupérer les noeuds du graphe correspondant aux fiches à lier
-    print('TEST :' + fiche_id + '; liee : ' + fiche_liee_id)
+    print('TEST :' + fiche_id + '; liee : ' + fiche_liee_id + ', motcle : ' + motcle)
     node1 = graph.find_one('Fiche_descriptive', property_key='doc_position', property_value=fiche_id)
     node2 = graph.find_one('Fiche_descriptive', property_key='doc_position', property_value=fiche_liee_id)
     print('Node 1 : ' + str(node1.exists) + ' uri 1 : ' + str(node1.uri))
     print('Node 2 : ' + str(node2.exists) + ' uri 2 : ' + str(node2.uri))
-    #Créer la relation correspondantes
-    rel = Relationship.cast(node1, (motcle, {"complement": '',"ponderation": poids}), node2)
-    # Créer le lien dans neo4j
-    graph.create(rel)
-    print('OK')
-
+    # Vérifier que la relation n'existe pas déjà
+    query = 'MATCH (n1)-[r]-(n2) WHERE n1.doc_position="'+ fiche_id +'" AND n2.doc_position="'+ fiche_liee_id +'" AND type(r)="'+ motcle +'" RETURN r'
+    print(query)
+    result = graph.cypher.execute(query)
+    if result.one is None:
+        #Créer la relation correspondante
+        rel = Relationship.cast(node1, (motcle, {"complement": '',"ponderation": poids}), node2)
+        # Créer le lien dans neo4j
+        graph.create(rel)
+        print('OK')
+    #TODO renvoyer une exception pour arrêter le traitement
 
 
 def main(fichier_relations, dossier, ignore_files):
