@@ -13,8 +13,6 @@
     "bootstrap": "bootstrap",
     "automaticsteps": false,
     "txt4ana": "txt4ana",
-    "linkwords": "/home/matthieu/Bureau/5_Haruspexv2/french/french/schema",
-    "emptywords": "/home/matthieu/Bureau/5_Haruspexv2/french/french/stoplist_Fr.txt",
     "extra_emptywords":"extra_emptywords.txt",
     "extra_stopwords":"extra_stopwords.txt",
     "propernouns": true

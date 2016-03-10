@@ -72,16 +72,20 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
                         #print('exprearea',expre_area)
                         if not forbid & set(expre_area):#no intersection: none of the expre_pos is forbiden (allready seen by the expa)
                             exprewin.setdefault(couple, set()).add(expre_area)#retrieve the whole expre pos from the single first cand_pos
+                        else:
+                            print('EXPA inside EXPRE')
                             #expre_what[couple] is a set of tuple(occ_pos of the entire expre) -> spread over 2 cands and the inbetween -> contain the future cand.where
             #third : building the new expre, starting with the less occurring ones.
             # Managing conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
-            #TODO un-indent this block?? with sorted by less occurring expre ?
     for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):
         if len(exprewin[couple]) > expression_threshold:
-            for exprearea in exprewin[couple]:
+            for expre_area in exprewin[couple]:
                 if not forbid & set(expre_area):
-                    forbid.update(set(exprearea))
+                    forbid.update(set(expre_area))
                     valid_exprewin.setdefault(couple, set()).add(expre_area)
+                else:
+                    print('DOUBLE EXPRE')
+                    print(expre_area)
     for couple in valid_exprewin:
         next_id = max(CAND) + 1 + len(CAND2build)
         CAND2build[next_id] = (next_id, valid_exprewin[couple])# new CAND to be created (stored while looping in the dict)
