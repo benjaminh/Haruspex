@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-import os
+from os.path import join
 import re
 
 #  begin regex  ###########################################################
@@ -28,81 +28,70 @@ Rindex = re.compile(r'(\\index{[^}]*})') # recupère l'ensemble de la commande i
 #  end regex  ###########################################################
 
 
-def AcoladeClose(OrigineFile, step):
-    with open(OrigineFile, 'r', encoding = 'utf8') as fichierOrigine:
+def acoladeclose(beingcleandirectory, fichier_a_traiter):
+    with open(fichier_a_traiter, 'r', encoding = 'utf8') as fichierOrigine:
         texteO = fichierOrigine.readlines()
-        base = os.path.basename(OrigineFile)
-        OrigineFileName = os.path.splitext(base)[0]
         # OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
         # OrigineFileName    = str(OrigineFileName[0])
-        extensionEtape = '.Step' + str(step) + '.txt'
-        FileStep1 = 'BeingClean/' + OrigineFileName + extensionEtape
+        FileStep1 = join(beingcleandirectory, 'step1')
         with open(FileStep1, "w", encoding = 'utf8') as filestep1:
             i = 0
             for ligneO in texteO:
-                if "\end{document}" not in texteO[i]:
-                    i += 1
-                    ligneO = texteO[i]
-                    if "{" in ligneO:
-                        compteur = len(re.findall("{", ligneO))
-                        compteurF = len(re.findall("}", ligneO))
-                        while compteur > compteurF:
-                            texteO[i] = re.sub("\n", " ", texteO[i]) #texte[i] = ligne (la première fois)
-                            #print (texte[i])
-                            filestep1.write(texteO[i]) # écrit cette ligne sans le \n
-                            compteur += len(re.findall("{", texteO[i+1])) #incrémente le compteur avec ce qu'il trouve dans la ligne suivante
-                            compteurF += len(re.findall("}", texteO[i+1]))
-                            i += 1 # passe à la ligne suivante
-                    filestep1.write(texteO[i])
+                if i == len(texteO)-1:
+                    break
+                i += 1
+                ligneO = texteO[i]
+                if "{" in ligneO:
+                    compteur = len(re.findall("{", ligneO))
+                    compteurF = len(re.findall("}", ligneO))
+                    while compteur > compteurF:
+                        texteO[i] = re.sub("\n", " ", texteO[i]) #texte[i] = ligne (la première fois)
+                        #print (texte[i])
+                        filestep1.write(texteO[i]) # écrit cette ligne sans le \n
+                        compteur += len(re.findall("{", texteO[i+1])) #incrémente le compteur avec ce qu'il trouve dans la ligne suivante
+                        compteurF += len(re.findall("}", texteO[i+1]))
+                        i += 1 # passe à la ligne suivante
+                filestep1.write(texteO[i])
             filestep1.close()
             fichierOrigine.close()
     return 1
 
 #warning: in case of use of mathematics formula with non closed square bracket (eg: an range of values like [1976, 1986[)
-def CrochetClose(OrigineFile, step):
-    OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
-    OrigineFileName    = str(OrigineFileName[0])
-    extensionEtape = '.Step' + str(step) + '.txt'
-    extensionEtapePrec = '.Step' + str(step-1) + '.txt'
-    FileStep1 = 'BeingClean/' + OrigineFileName + extensionEtapePrec
-    FileStep2 = 'BeingClean/' + OrigineFileName + extensionEtape
+def crochetclose(beingcleandirectory, step):
+    FileStep2 =  join(beingcleandirectory, 'step' + str(step+1))
+    FileStep1 = join(beingcleandirectory, 'step' + str(step))
     with open(FileStep1, 'r', encoding = 'utf8') as filestep1:
         texteS1 = filestep1.readlines()
         with open(FileStep2, "w", encoding = 'utf8') as filestep2:
             i = 0
             for ligneS1 in texteS1:
-                if "\end{document}" not in texteS1[i]:
-                    i += 1
-                    ligneS1 = texteS1[i]
+                if i == len(texteS1) -1:
+                    break
+                i += 1
+                ligneS1 = texteS1[i]
 
-                    if "[" in ligneS1:
-                        compteur = len(re.findall("\[", ligneS1))
-                        compteurF = len(re.findall("\]", ligneS1))
-                        while compteur > compteurF:
-                            texteS1[i] = re.sub("\n", " ", texteS1[i]) #texteS1[i] = ligneS1 (la première fois)
-                            filestep2.write(texteS1[i]) # écrit cette ligne sans le \n
-                            compteur += len(re.findall("\[", texteS1[i+1])) #incrémente le compteur avec ce qu'il trouve dans la ligne suivante
-                            compteurF += len(re.findall("\]", texteS1[i+1]))
-                            i += 1 # passe à la ligne suivante
-                    filestep2.write(texteS1[i])
+                if "[" in ligneS1:
+                    compteur = len(re.findall("\[", ligneS1))
+                    compteurF = len(re.findall("\]", ligneS1))
+                    while compteur > compteurF:
+                        texteS1[i] = re.sub("\n", " ", texteS1[i]) #texteS1[i] = ligneS1 (la première fois)
+                        filestep2.write(texteS1[i]) # écrit cette ligne sans le \n
+                        compteur += len(re.findall("\[", texteS1[i+1])) #incrémente le compteur avec ce qu'il trouve dans la ligne suivante
+                        compteurF += len(re.findall("\]", texteS1[i+1]))
+                        i += 1 # passe à la ligne suivante
+                filestep2.write(texteS1[i])
             filestep2.close()
             filestep1.close()
     return 1
 
 
-def Clean(OrigineFile, step):
-    OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
-    OrigineFileName    = str(OrigineFileName[0])
-    extensionEtape = '.Step' + str(step) + '.txt'
-    extensionEtapePrec = '.Step' + str(step-1) + '.txt'
-    FileStep2 = 'BeingClean/' + OrigineFileName + extensionEtapePrec
-    FileStep3 = 'BeingClean/' + OrigineFileName + extensionEtape
+def clean(beingcleandirectory, step, Fichier_a_traiter):
+    FileStep3 =  join(beingcleandirectory, 'step' + str(step+1))
+    FileStep2 = join(beingcleandirectory, 'step' + str(step))
     with open(FileStep2, 'r', encoding = 'utf8') as filestep2:
         texteS2 = filestep2.readlines()
-        with open(FileStep3, "w", encoding = 'utf8') as filestep3:
-
+        with open(Fichier_a_traiter, 'w', encoding = 'utf8') as filestep3:#erase and rewrite the concat.tex initial file with a new, clean one!
             for ligne in texteS2:
-
                 #remplace les textbf par du texte simple
                 c = re.findall(Rtextbf, ligne)
                 d = re.findall(Rcontenubf, ligne)
@@ -110,7 +99,6 @@ def Clean(OrigineFile, step):
                 while i<len(c):
                     ligne = ligne.replace(c[i],d[i])
                     i += 1
-
                 #remplace les textit par du texte simple
                 e = re.findall(Rtextit, ligne)
                 f = re.findall(Rcontenuit, ligne)
@@ -118,8 +106,7 @@ def Clean(OrigineFile, step):
                 while i<len(c):
                     ligne = ligne.replace(e[j],f[j])
                     j += 1
-
-                #remplace les caractères spéciaux perdus entre acolade (au sein d'un zone entre acolade souvent, ex: "\footnote{hello world [2015{]}}") par le même caractère sans les sans les acolades
+                #remplace les caractères spéciaux perdus entre acolade (au sein d'un zone entre acolade souvent, ex: "\footnote{hello world [2015{]}}") par le même caractère sans les acolades
                 #au lieux de les virer: ligne = re.sub(r"{[^\w\n]*}", "", ligne) et de perdre des crochets perdus entre acolade par exemple...
                 g = re.findall(Racolades, ligne)
                 h = re.findall(RcontenuAcolades, ligne)
@@ -127,7 +114,6 @@ def Clean(OrigineFile, step):
                 while k<len(g):
                     ligne = ligne.replace(g[k],h[k])
                     k += 1
-
                 if re.match(r'(\[Warning:[^\]]*\])', ligne):
                     ligne = re.sub(r'(\[Warning:[^\]]*\])', '', ligne) # supprime les warning image ignored... tant pis pour elles!
                     print('Problème avec une image')
@@ -141,7 +127,7 @@ def Clean(OrigineFile, step):
                 ligne = re.sub(r'ʽ|՚|‘|‛|‵|ʾ|\'|ʿ|ʼ|΄|´|´|′|Ꞌ|ꞌ|ʹ|ˈ|‘|’|ʽ|ʼ|’', '\'', ligne)
                 ligne = re.sub(r'{\oe}', 'œ', ligne)
                 ligne = re.sub(r"{\\textless}", "", ligne)
-                ligne = re.sub(r"^\\\w*(\{\}|[\s\n]|\{[^\w\n]+\})", "", ligne)
+                ligne = re.sub(r"^\\\w*(\{\}|[\s\n]|\{[^\w\n]+\})", "", ligne)#catch \foo{} or \foo{   } or \foo but doesn't catch \foo{bar}
                 ligne = re.sub(r"{[^\w\n]*}", "", ligne)
                 ligne = re.sub(RwithPict, "", ligne)
                 ligne = re.sub(RcrochetPict, "", ligne)
@@ -152,11 +138,18 @@ def Clean(OrigineFile, step):
                 ligne = re.sub(r'\\clearpage', "", ligne)
                 ligne = re.sub(r'\\footnotemark', "", ligne)
                 ligne = re.sub(Rindex, '', ligne)
-
             #enlève les passages à la ligne intempestifs dans un même paragraphe
                 if re.match(RdebutLigne, ligne) and not re.match(RFauxSaut, ligne):
                     ligne = re.sub(r'\n', " ", ligne)
                 filestep3.write(ligne)
         filestep3.close()
         filestep2.close()
-    return 1
+
+def cleanLatex(working_directory, close_squarebrackets):
+    etape = 0
+    beingcleandirectory = join(working_directory, 'pages', 'BeingClean')
+    Fichier_a_traiter = join(working_directory, 'pages', 'convertconcat', 'concat.tex')
+    etape += acoladeclose(beingcleandirectory,Fichier_a_traiter)
+    if close_squarebrackets:
+    	etape += crochetclose(beingcleandirectory, etape)
+    clean(beingcleandirectory, etape, Fichier_a_traiter)

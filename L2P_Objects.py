@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-
-import os
+from py2neo import Graph, Node, Relationship, authenticate
 import re
-import json
 
 
 RcaptionPict = re.compile(r'(?<=\\caption{)([^}]*)(?=})', re.UNICODE) #recupère la légende de l'image (contenu de caption)
@@ -16,29 +14,26 @@ Rtitresection = re.compile(r'(?<=\\section{)(.*)(?=})', re.UNICODE) #récupere l
 Rtitresubsection = re.compile(r'(?<=\\subsection{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
 Rtitresubsubsection = re.compile(r'(?<=\\subsubsection{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
 Rtitreparagraph = re.compile(r'(?<=\\paragraph{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
+Rfilename = re.compile(r'(?<=\\filename{)(.*)(?=})', re.UNICODE) #récupere le contenu (le titre)
 
 RibidOpCit = re.compile(r'(ibid|op\.\s?cit\.)', re.IGNORECASE)
 RopCitcontenu = re.compile(r'((?:[A-Z]*[^A-Z]*){,2})(?=op\.\s?cit\.|ibid|Ibid|Op. Cit|loc. cit.|Loc. cit.)(?u)') # catch ce qui précède un op. cit. jusqu'à rencontrer deux lettres majuscules -> donne l'élément cité.
 # RopCitcontenu = re.compile(r'([A-Z]*[^A-Z]*)(?=op\.\s?cit.)', re.UNICODE) # catch ce qui précède un op. cit. jusqu'à rencontrer une lettre majuscule -> donne l'élément cité.
-Rpages = re.compile(r'(\Wpp?\W?\W?[\d\s,-]+)', re.UNICODE) # catch les numéros de page dans une citation
+Rpages = re.compile(r'(\Wpp?\W?\W?[\d\s,-]+)', re.UNICODE) # catch les numéros de fiche dans une citation
 
 Ranycommand = re.compile(r'\\\w*\[?\{?[^\}|\]]*\}?\]?')
 Rall_postbiblio = re.compile(r'(bibliograph.?.?.?{.*}\n|bibliograph.?.?.?\n).*(?siu)')
 Rpictname = re.compile(r'(?<=\\includegraphics{)([^}]*)(?=})') # catch the picture name and its folder (the content of the includegraphics command)
 
-refdict = {}
-pictdict = {}
-pagesdict = {}
-
-
 
 class Picture:
     def __init__(self, line):
-        self.line = line
+        self.line = line#internal stuff for the method get-data()
         self.id = 0
-        self.file = ""
+        self.file = ""#path to the pictfile
         self.caption = ""
-        self.where = ""
+        self.where = ""#fiche.number
+        self._node = None
 
     def getdata(self):
         afile = re.findall(Rpictname, self.line)
@@ -49,6 +44,12 @@ class Picture:
         else:
             self.caption = None
 
+    def create_node(self,graph_db):
+        # Ajouter propriétés du type "modified" ?
+        pict_properties = {'file': self.file, 'caption': self.caption, }
+        self._node = Node.cast(pict_properties)
+        self._node.labels.add('picture')
+        graph_db.create(self._node)
 
 
 
@@ -56,12 +57,13 @@ class Picture:
 class Reference:
     def __init__(self, line):
         self.hascontent = False
-        self.line = line
+        self.line = line#internal stuff for the method get-data()
         self.id = 0
-        self.content = ""
-        self.where = ""
+        self.content = ""#the reference as written in the text (managing op.cit. and other latin stuffs)
+        self.where = ""#fiche.number
+        self._node = None
 
-    def replaceopcit_incontent(self):
+    def replaceopcit_incontent(self, refdict):
         ''' automically porcessed.
         modifies the content in the ref if this ref contains anything (op.cit. ibid. ...) pointing to a previous reference'''
         target = re.findall(RopCitcontenu, self.content)
@@ -83,29 +85,39 @@ class Reference:
             else:
                 self.content = prev_ref
         else:
-            print('NO REFERENCE FOUND FOR THIS ibidem: n°', self.id, '\ncontenant: ', self.content)
+            #print('NO REFERENCE FOUND FOR THIS ibidem: n°', self.id, '\ncontenant: ', self.content)
             self.content = 'NO REFERENCE FOUND FOR THIS ibidem in ref n°: ' + str(self.id) + ' \tconaining: ' + self.content
 
     def check(self):
         if self.content:
             self.hascontent = True
 
-    def getdata(self):
-        '''  fill the content of the ref instaance from the given textline '''
+    def getdata(self, refdict):
+        '''  fill the content of the ref instance from the given textline '''
         acontent = re.findall(RcontenuFootnote, self.line)
         if not acontent:
             acontent = re.findall(RcontenuFootnotetext, self.line)
         if acontent:
             self.content = acontent[0]
         if re.search(RibidOpCit, self.content):
-            print('OP CIT FOUND in ref n°' + str(self.id))
-            self.replaceopcit_incontent()
+            #print('OP CIT FOUND in ref n°' + str(self.id))
+            self.replaceopcit_incontent(refdict)
         self.check()
 
+    def create_node(self,graph_db):
+        # Ajouter propriétés du type "modified" ?
+        ref_properties = {'content': self.content, }
+        self._node = Node.cast(ref_properties)
+        self._node.labels.add('ref')
+        graph_db.create(self._node)
 
 
 class Counter:
+    '''
+    just a counter for the section, subsection, and other stuff
+    '''
     def __init__(self):
+        self.file_num = 0
         self.paragraphnum = 0
         self.subsubsectionnum = 0
         self.subsectionnum =  0
@@ -113,7 +125,13 @@ class Counter:
         self.pictnum = 0
         self.refnum = 0
 
-    def pageincrement_get(self, level):
+    def ficheincrement_get(self, level):
+        if level ==0:
+            self.file_num += 1
+            self.sectionnum = 0
+            self.subsectionnum = 0
+            self.subsubsectionnum = 0
+            self.paragraphnum = 0
         if level == 1:
             self.sectionnum += 1
             self.subsectionnum = 0
@@ -128,8 +146,8 @@ class Counter:
             self.paragraphnum = 0
         if level == 4:
             self.paragraphnum += 1
-        pagenumber = str(self.sectionnum) + '_' + str(self.subsectionnum) + '_' + str(self.subsubsectionnum) + '_' + str(self.paragraphnum)
-        value = (self.paragraphnum, self.subsubsectionnum, self.subsectionnum, self.sectionnum, pagenumber)
+        fichenumber = str(self.file_num) + '_' + str(self.sectionnum) + '_' + str(self.subsectionnum) + '_' + str(self.subsubsectionnum) + '_' + str(self.paragraphnum)
+        value = (self.paragraphnum, self.subsubsectionnum, self.subsectionnum, self.sectionnum, self.file_num, fichenumber)
         return value
 
     def increment_get(self, what):
@@ -142,7 +160,7 @@ class Counter:
 
 
 
-class Page:
+class Fiche:
     def __init__(self, line, author, date_pub):
         self.firstline = line
         self.paragraphnum = 0
@@ -157,34 +175,42 @@ class Page:
         self.picts = []
         self.author = author
         self.date = date_pub
-        self.word_nb_page = 0
+        self.word_nb_fiche = 0
         self.valid = False
+        self.file_num = 0
+        self._node = None
 
     def titling(self):
-        if r"paragraph" in self.firstline:
+        if re.match(r'\\filename', self.firstline):
+            title = re.findall(Rfilename, self.firstline)
+            self.title = title[0]
+            return 0
+        elif re.match(r'\\paragraph', self.firstline):
             title = re.findall(Rtitreparagraph, self.firstline)
             self.title = title[0]
             return 4
-        if r"subsubsection" in self.firstline:
+        elif re.match(r'\\subsubsection', self.firstline):
             title = re.findall(Rtitresubsubsection, self.firstline)
             self.title = title[0]
             return 3
-        if r"subsection" in self.firstline:
+        elif re.match(r'\\subsection', self.firstline):
             title = re.findall(Rtitresubsection, self.firstline)
             self.title = title[0]
             return 2
-        if r"section" in self.firstline:
+        elif re.match(r'\\section', self.firstline):
             title = re.findall(Rtitresection, self.firstline)
             self.title = title[0]
             return 1
 
+
     def numbering(self, args):
-        paragraphnum, subsubsectionnum, subsectionnum, sectionnum, pagenumber = args
+        paragraphnum, subsubsectionnum, subsectionnum, sectionnum, filenumber, fichenumber = args
+        self.file_num = filenumber
         self.sectionnum = sectionnum
         self.subsectionnum = subsubsectionnum
         self.subsubsectionnum = subsubsectionnum
         self.paragraphnum = paragraphnum
-        self.number = pagenumber
+        self.number = fichenumber
 
     def autoclean(self):
         content = re.sub(Rfootnote, '', self.text_rawcontent)
@@ -194,25 +220,25 @@ class Page:
         content = re.sub(r'\n\n+', '\n', content)
         content = re.sub(r'\{.*\}', '', content)
         self.text_content = content
-        self.word_nb_page = len(re.findall(r'(\w+)(?u)', self.text_content))
+        self.word_nb_fiche = len(re.findall(r'(\w+)(?u)', self.text_content))
 
     def __repr__(self):
-        # return "####\n page number: {}\n word count: {}\n page title: {}\n references : {}\n pictures: {}".format(self.number, self.word_nb_page, self.title, self.refs, self.picts)
+        # return "####\n fiche number: {}\n word count: {}\n fiche title: {}\n references : {}\n pictures: {}".format(self.number, self.word_nb_fiche, self.title, self.refs, self.picts)
         if self.valid:
-            return "page # {}, created".format(self.number)
+            return "fiche # {}, created".format(self.number)
         else:
-            return "page # {}, invalid (but created): too few words".format(self.number)
+            return "fiche # {}, invalid (but created): too few words".format(self.number)
 
     def json_obj(self):
         data = {
+                'file_num': self.file_num,
                 'paragraphnum': self.paragraphnum,
                 'subsubsectionnum': self.subsubsectionnum,
                 'subsectionnum': self.subsectionnum,
                 'sectionnum': self.sectionnum,
-                'pagenumber': self.number,
+                'fichenumber': self.number,
                 'title': self.title,
-                'word_nb': self.word_nb_page,
-                'content' : self.text_content,
+                'word_nb': self.word_nb_fiche,
                 'references' : self.refs,
                 'pictures' : self.picts,
                 'author' : self.author,
@@ -220,98 +246,22 @@ class Page:
                 }
         return data
 
+    def create_node(self,graph_db):
+        # Ajouter propriétés du type "modified" ?
+        fiche_properties = {'doc_position': self.number, 'titre': self.title,
+                            'auteur': self.author, 'date_creation': self.date,}
+        self._node = Node.cast(fiche_properties)
+        self._node.labels.add('fiche')
+        graph_db.create(self._node)
 
-
-
-
-
-
-
-
-
-
-def writePages_and_txt4ana(OrigineFile, write_lastsection, mini_size, step, decoupeParagraphe, author_name, date):
-    #getting the last cleaned file
-    OrigineFileName = re.findall(r'(?<=/|\\)([^/]+)(?=\.tex)', OrigineFile)
-    OrigineFileName	= str(OrigineFileName[0])
-    extensionEtapePrec = '.Step' + str(step-1) + '.txt'
-    cleanfilename = 'BeingClean/' + OrigineFileName + extensionEtapePrec
-    author = author_name
-    date_pub = date
-    newpage = None
-    counter = Counter()
-    pagesordered = []
-    data = {}
-
-    with open(cleanfilename, 'r', encoding = 'utf8') as text:
-        # text = cleanfile.readlines()
-
-        for line in text:
-            if re.match(r'(\\.*section)|(\\paragraph)', line):
-                if newpage:
-                    newpage.autoclean()
-                    if newpage.word_nb_page > mini_size:
-                        newpage.valid = True
-                    pagesordered.append(newpage.number)
-                    pagesdict[newpage.number] = newpage
-                newpage = Page(line, author, date_pub)
-                level = newpage.titling()
-                newpage.numbering(counter.pageincrement_get(level))
-
-            if re.search(r'\\includegraphics', line) and newpage:
-                line = line + next(text)
-                newpict = Picture(line)
-                newpict.id = counter.increment_get('pict')
-                newpict.getdata()
-                newpict.where = newpage.number
-                newpict.id = counter.increment_get('pict')
-                pictdict[newpict.id] = newpict
-                newpage.picts.append(newpict.id)
-
-            if re.search(Rfootnote, line) and newpage:
-                foottext = re.findall(Rfootnote, line)
-                for footnote in foottext:
-                    newref = Reference(footnote)
-                    newref.id = counter.increment_get('ref')
-                    newref.getdata()
-                    newref.where = newpage.number
-                    refdict[newref.id] = newref
-                    newpage.refs.append(newref.id)
-                newpage.text_rawcontent += line
-
-            elif newpage:
-                if newpage:
-                    newpage.text_rawcontent += line
-
-        if write_lastsection:
-            newpage.autoclean()
-            pagesdict[newpage.number] = newpage
-
-    for pageobj in pagesordered:
-        print(pagesdict[pageobj])
-
-#writing output files
-    parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-    with open(os.path.join(parent_dir, 'text4ana.txt'), 'w', encoding = 'utf-8') as txt4ana:
-        for pagenum in pagesordered:
-            # txt4ana.write(pageobj.title)
-            txt4ana.write('\nwxcv' + pagesdict[pagenum].number + 'wxcv\n')
-            txt4ana.write(pagesdict[pagenum].title)
-            txt4ana.write(pagesdict[pagenum].text_content)
-
-    with open('pages/allpages.json', 'w', encoding = 'utf-8') as jsonpages:
-        for pagenum in pagesdict:
-            data[pagenum] = pagesdict[pagenum].json_obj()
-        json.dump(data, jsonpages, ensure_ascii=False, indent=4)
-
-    imagin = {}
-    with open('pages/images.json', 'w', encoding = 'utf-8') as imagesfile:
-        for pictid in pictdict:
-            imagin.setdefault(pictdict[pictid].where, {}).update({pictdict[pictid].file : pictdict[pictid].caption})
-        json.dump(imagin, imagesfile, ensure_ascii=False, indent=4)
-
-    referin = {}
-    with open('pages/references.json', 'w', encoding = 'utf-8') as refsfile:
-        for refid in refdict:
-            referin[refid] = refdict[refid].content
-        json.dump(referin, refsfile, ensure_ascii=False, indent=4)
+    def create_relations(self, graph_db, pictdict, refdict):
+        for ref in self.refs:
+            #Build a relation between the nodes of each the fiche and each fiche's references
+            ref_node = refdict[ref]._node
+            relatio = Relationship.cast(ref_node, ("ref"), self._node)
+            graph_db.create(relatio)
+        #Build a relation between the nodes of each the fiche and each fiche's pictures
+        for pict in self.picts:
+            pict_node = pictdict[pict]._node
+            relatio = Relationship.cast(pict_node, ("pict"), self._node)
+            graph_db.create(relatio)
