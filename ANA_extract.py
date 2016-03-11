@@ -52,7 +52,7 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
         expawinmerged = ANA_useful.merge_egal_sple_dict(OCC, expawin)# {tuple(t_word_pos):list of (tuple_cand_positions)}
         if expawinmerged:
             for expa_twords_eq in expawinmerged:
-                if len(expa_twords_eq) > expansion_threshold:
+                if len(expa_twords_eq) >= expansion_threshold:
                     # forbid = set(tuple_cand_positions)
                     #Build the cand expa (inside or not) by the way...
                     where = set()#where is set of tuple of expa_positions
@@ -66,7 +66,7 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
         #second: remove the allready  position from the expre_windows and build exprewindow dict (clean one)
         if expre_where:
             for couple in sorted(expre_where, key=lambda couple: len(expre_where[couple])):#the less occuring expre first
-                if len(expre_where[couple]) > expression_threshold:# set of tuples(firstcand_positions). the shorter, not long enough are rejected
+                if len(expre_where[couple]) >= expression_threshold:# set of tuples(firstcand_positions). the shorter, not long enough are rejected
                     for cand_positions in expre_where[couple]:#for each tuple of cand_positions
                         expre_area = expre_what[cand_positions]#tuple, all occ positions between the head of firstcand_positions and the extrem tail of second cand position
                         #print('exprearea',expre_area)
@@ -78,14 +78,13 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
             #third : building the new expre, starting with the less occurring ones.
             # Managing conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
     for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):
-        if len(exprewin[couple]) > expression_threshold:
+        if len(exprewin[couple]) >= expression_threshold:
             for expre_area in exprewin[couple]:
                 if not forbid & set(expre_area):
                     forbid.update(set(expre_area))
                     valid_exprewin.setdefault(couple, set()).add(expre_area)
                 else:
                     print('DOUBLE EXPRE')
-                    print(expre_area)
     for couple in valid_exprewin:
         next_id = max(CAND) + 1 + len(CAND2build)
         CAND2build[next_id] = (next_id, valid_exprewin[couple])# new CAND to be created (stored while looping in the dict)

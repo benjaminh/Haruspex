@@ -125,14 +125,25 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
                 linkwords[linkword] = i+1# to avoid having the first line considered as 0 index; Actualy 0 is for non-linkwords
         return linkwords
 
+def build_regex(wordlist_file_path):
+    wordset = build_wordset(wordlist_file_path)
+    regexlist = [word.strip() + '.?.?' for word in wordset if word]#two extra last characters are authorized
+    if regexlist:
+        regex = r'|'.join(regexlist) + r'(?siu)'
+        return re.compile(regex)
+    else:
+        return re.compile(' ')#FIXME I need a regex that will never match, a None regex, here the space will never match since we process only words
+
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
 def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, match_propernouns, working_directory):
     bootstrap = build_bootdict(bootstrap_file_path)
     occ2boot = {}
     propernouns = {}
-    emptywords = build_wordset(emptywords_file_path, extra_emptywords_file_path)
-    stopwords = build_wordset(stopwords_file_path, extra_stopwords_file_path)
+    emptywords = build_wordset(emptywords_file_path)
+    stopwords = build_wordset(stopwords_file_path)
+    Rextraemptyword = build_regex(extra_emptywords_file_path)
+    Rextrastopword = build_regex(extra_stopwords_file_path)
     linkwords = build_linkdict(linkwords_file_path)
     Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')#TODO build a splitermark regex
     Rdate = re.compile(r'(1\d\d\d|20\d\d)')
@@ -160,15 +171,17 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                 elif word in linkwords:
                     OCC[index] = Occurrence(long_shape = word, linkword = linkwords[word])
                     dotahead = False
-                elif word.lower() in stopwords:
+                elif word.lower() in stopwords or Rextrastopword.match(word):
+                    # if Rextrastopword.match(word):
+                    #     print(word)
                     OCC[index] = Occurrence(long_shape = word, stopword = True)
                     if re.match(r'\.|\?|\!', word):
                         dotahead = True
+                elif word.lower() in emptywords or Rnumeral.match(word) or Rponctuation.match(word) or Rextraemptyword.match(word):
+                    OCC[index] = Occurrence(long_shape = word)
+                    dotahead = False
                 elif Rdate.match(word):#IDEA is it interesting to have dates as tword?
                     OCC[index] = Occurrence(long_shape = word, date = True, tword = True)
-                    dotahead = False
-                elif word.lower() in emptywords or Rnumeral.match(word) or Rponctuation.match(word):
-                    OCC[index] = Occurrence(long_shape = word)
                     dotahead = False
                 else:
                     OCC[index] = Occurrence(long_shape = word, tword = True)

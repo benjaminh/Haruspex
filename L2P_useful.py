@@ -24,7 +24,7 @@ def writer2latex(writer2LaTeX_path, odt_file_names, outputconvert, working_direc
         subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
     chdir(origWD)
 
-def concatenate(odt_file_names, txt_files, output):#only concatenate the  tex or .odt files run in a first time (before processing them and before processing the non tex nor odt ones)
+def concatenate(odt_file_names, tex_files, output):#only concatenate the  tex or .odt files run in a first time (before processing them and before processing the non tex nor odt ones)
     concat_filepath = join(output, 'concat.tex')
     with open(concat_filepath, 'w') as concat_file:
         for odt_file_name in odt_file_names:
@@ -33,7 +33,7 @@ def concatenate(odt_file_names, txt_files, output):#only concatenate the  tex or
             with open(converted_texfilepath) as infile:
                 for line in infile:
                     concat_file.write(line)
-        for filepath in txt_files:
+        for filepath in tex_files:
             concat_file.write('\\filename{' + filepath + '}\n')#a new latex-like marker for the page process
             with open(filepath) as infile:
                 for line in infile:

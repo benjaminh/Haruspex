@@ -127,6 +127,7 @@ def clean(beingcleandirectory, step, Fichier_a_traiter):
                 ligne = re.sub(r'ʽ|՚|‘|‛|‵|ʾ|\'|ʿ|ʼ|΄|´|´|′|Ꞌ|ꞌ|ʹ|ˈ|‘|’|ʽ|ʼ|’', '\'', ligne)
                 ligne = re.sub(r'{\oe}', 'œ', ligne)
                 ligne = re.sub(r"{\\textless}", "", ligne)
+                ligne = re.sub(r"{\\textbar}", "", ligne)
                 ligne = re.sub(r"^\\\w*(\{\}|[\s\n]|\{[^\w\n]+\})", "", ligne)#catch \foo{} or \foo{   } or \foo but doesn't catch \foo{bar}
                 ligne = re.sub(r"{[^\w\n]*}", "", ligne)
                 ligne = re.sub(RwithPict, "", ligne)
@@ -138,9 +139,9 @@ def clean(beingcleandirectory, step, Fichier_a_traiter):
                 ligne = re.sub(r'\\clearpage', "", ligne)
                 ligne = re.sub(r'\\footnotemark', "", ligne)
                 ligne = re.sub(Rindex, '', ligne)
-            #enlève les passages à la ligne intempestifs dans un même paragraphe
-                if re.match(RdebutLigne, ligne) and not re.match(RFauxSaut, ligne):
-                    ligne = re.sub(r'\n', " ", ligne)
+                #USELESS enlève les passages à la ligne intempestifs dans un même paragraphe
+                # if re.match(RdebutLigne, ligne) and not re.match(RFauxSaut, ligne):
+                #     ligne = re.sub(r'\n', " ", ligne)
                 filestep3.write(ligne)
         filestep3.close()
         filestep2.close()

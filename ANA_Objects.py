@@ -100,6 +100,7 @@ class Occurrence:
             if self.ascii_shape != '' and occ2.ascii_shape != '':
                 if ((self.ascii_shape == occ2.ascii_shape) \
                 or (occ2.ascii_shape == self.ascii_shape + 's') or (self.ascii_shape == occ2.ascii_shape + 's') \
+                or (occ2.ascii_shape == self.ascii_shape + 'x') or (self.ascii_shape == occ2.ascii_shape + 'x') \
                 or (occ2.ascii_shape == self.ascii_shape + 'e') or (self.ascii_shape == occ2.ascii_shape + 'e') \
                 or (occ2.ascii_shape == self.ascii_shape + 'es') or (self.ascii_shape == occ2.ascii_shape + 'es')):
                     souple = True
