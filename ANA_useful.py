@@ -5,6 +5,7 @@ import logging
 import re
 from ANA_Objects import Nucleus, Candidat, Occurrence, Page
 import json
+from csv import writer
 import copy
 
 global rm_accent
@@ -295,8 +296,10 @@ def write_output(CAND, OCC, PAGES):
         json.dump(wherekey, where_keyword, ensure_ascii=False, indent=4)
     with open('intra/what_inpage.json', 'w') as what_inpage:
         json.dump(inpage, what_inpage, ensure_ascii=False, indent=4)
-    with open('output/keywords.csv', 'w') as keyfile:
-        keyfile.write('cand_id, max occurring shape, occurrences, groups\n')
+    with open('output/keywords.csv', 'w') as csvfile:
+        keyfile = writer(csvfile)
+        header = ['cand_id', 'max occurring shape', 'occurrences', 'groups', 'merge with']
+        linksfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
-                keyfile.write(str(idi)+','+ dict_candshape[idi]["max_occ_shape"]+','+str(len(CAND[idi].where))+','+','+'\n')
+                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), '', ''])
