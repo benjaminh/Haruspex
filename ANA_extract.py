@@ -72,8 +72,6 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
                         #print('exprearea',expre_area)
                         if not forbid & set(expre_area):#no intersection: none of the expre_pos is forbiden (allready seen by the expa)
                             exprewin.setdefault(couple, set()).add(expre_area)#retrieve the whole expre pos from the single first cand_pos
-                        else:
-                            print('EXPA inside EXPRE')
                             #expre_what[couple] is a set of tuple(occ_pos of the entire expre) -> spread over 2 cands and the inbetween -> contain the future cand.where
             #third : building the new expre, starting with the less occurring ones.
             # Managing conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
@@ -83,31 +81,9 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
                 if not forbid & set(expre_area):
                     forbid.update(set(expre_area))
                     valid_exprewin.setdefault(couple, set()).add(expre_area)
-                else:
-                    print('DOUBLE EXPRE')
     for couple in valid_exprewin:
         next_id = max(CAND) + 1 + len(CAND2build)
         CAND2build[next_id] = (next_id, valid_exprewin[couple])# new CAND to be created (stored while looping in the dict)
-            # for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):#the less occuring expre first
-            # #FIXME ordre de traitement des expre et gérer les conflicts:
-            # #l'ideal serait: d'abord ceux qui ont le moins d'occurrence, dans la limite de ne pas empecher la formation de ceux qui en ont le plus!
-            # #pour l'instant, on commence par les moins occurrent et tant pis s'il n'en reste pas pour construire les plus occurrents (peu probalble, mais ça serait dommage!)
-            #     all_expre_occ = set()
-            #     if len(exprewin[couple]) > expression_threshold:
-            #         for expre_area in exprewin[couple]:
-            #             all_expre_occ.update(set(expre_area))
-            #         if set(all_expre_occ).isdisjoint(done):#if none of the occurrence composing th expre has allready been seen this step (in case A B C) will try to build AB and BC. This is to avoid
-            #             done.update(set(all_expre_occ))
-            #             next_id = max(CAND) + 1 + len(CAND2build)
-            #             CAND2build[next_id] = (next_id, exprewin[couple])# new CAND to be created (stored while looping in the dict)
-            #         else:
-            #             allpos = ''
-            #             for expre_pos in exprewin[couple]:
-            #                 for pos in expre_pos:
-            #                     allpos += OCC[pos].long_shape
-            #                 break
-
-    #print(forbid)
     for idi, value in CAND2build.items():#building all the new cands
         CAND[idi] = Candidat(idi = value[0], where = value[1])
         CAND[idi].build(OCC, CAND)

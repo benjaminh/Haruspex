@@ -299,7 +299,7 @@ def write_output(CAND, OCC, PAGES):
     with open('output/keywords.csv', 'w') as csvfile:
         keyfile = writer(csvfile)
         header = ['cand_id', 'max occurring shape', 'occurrences', 'groups', 'merge with']
-        linksfile.writerow(header)
+        keyfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
                 keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), '', ''])
