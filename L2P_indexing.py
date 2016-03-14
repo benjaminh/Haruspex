@@ -5,7 +5,7 @@ from os.path import join
 import re
 import json
 from L2P_Objects import Fiche, Reference, Picture, Counter
-from py2neo import neo4j, Node, Relationship
+from py2neo import Graph, Node, Relationship, authenticate
 
 Rfootnote = re.compile(r'(\\footnote[^}]*})', re.UNICODE) #récupere l'ensemble (la footnote) pour le supprimer
 
@@ -109,9 +109,8 @@ def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, para
     print('\n\n###\nnow uploading to neo4j database, this lasts around 15 secondes\n###')
     #writing outputs
     try:
-        graph_db = neo4j.GraphDatabaseService()
-        # authenticate("localhost:7474", "neo4j", "haruspex")
-        # graph_db = Graph()
+        authenticate("localhost:7474", "neo4j", "haruspex")
+        graph_db = Graph()
         graph_db.cypher.execute("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n")
         create_nodes_and_rels(fichesdict, pictdict, refdict, graph_db)
     except:

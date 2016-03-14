@@ -3,6 +3,7 @@
 import re
 import logging
 import ANA_useful
+# from ANA_useful import str_simplify
 import distance
 # en meta: il faut 1 dict pour les occurrences + 1 set pour les candidats
 # ce sont nos 2 types d'objets typiques.
@@ -79,7 +80,6 @@ class Occurrence:
 
     def set_shapes(self):
         if not self.date:
-            # self.set_ascii_longshape()
             self.ascii_shape = ANA_useful.str_simplify(self.long_shape)
             short_shape = [caract for caract in self.ascii_shape if (Rconsonne.match(caract))] #the 3 first charactere from the ascii shape
             short_shape = short_shape[:3]
