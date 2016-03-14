@@ -60,9 +60,9 @@ def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, para
     fichesordered = []
     data = {}
     if parag_cut:
-        fiche_delimiter = r'(\\.*section)|(\\paragraph)|(\\filename)'
+        fiche_delimiter = r'(\\\w*section)|(\\paragraph)|(\\filename)'
     else:
-        fiche_delimiter = r'(\\.*section)|(\\filename)'
+        fiche_delimiter = r'(\\\w*section)|(\\filename)'
 
     with open(cleanfilename, 'r', encoding = 'utf8') as text:
         for line in text:
@@ -98,8 +98,7 @@ def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, para
                 newfiche.text_rawcontent += line
 
             elif newfiche:
-                if newfiche:
-                    newfiche.text_rawcontent += line
+                newfiche.text_rawcontent += line
 
         if write_lastsection:
             newfiche.autoclean()

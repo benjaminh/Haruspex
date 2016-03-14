@@ -21,7 +21,7 @@ RopCitcontenu = re.compile(r'((?:[A-Z]*[^A-Z]*){,2})(?=op\.\s?cit\.|ibid|Ibid|Op
 # RopCitcontenu = re.compile(r'([A-Z]*[^A-Z]*)(?=op\.\s?cit.)', re.UNICODE) # catch ce qui précède un op. cit. jusqu'à rencontrer une lettre majuscule -> donne l'élément cité.
 Rpages = re.compile(r'(\Wpp?\W?\W?[\d\s,-]+)', re.UNICODE) # catch les numéros de fiche dans une citation
 
-Ranycommand = re.compile(r'\\\w*\[?\{?[^\}|\]]*\}?\]?')
+Ranycommand = re.compile(r'\\\w+\[?\{?[^\}|\]]*\}?\]?')
 Rall_postbiblio = re.compile(r'(bibliograph.?.?.?{.*}\n|bibliograph.?.?.?\n).*(?siu)')
 Rpictname = re.compile(r'(?<=\\includegraphics{)([^}]*)(?=})') # catch the picture name and its folder (the content of the includegraphics command)
 

@@ -16,13 +16,16 @@ def setup_dir():
 # conversion of odt file into minimal tex
 def writer2latex(writer2LaTeX_path, odt_file_names, outputconvert, working_directory):
     origWD = getcwd() #remember original WorkingDirectory
-    chdir(writer2LaTeX_path)
-    for filename in odt_file_names:
-        arguments = ['-config', join('config', 'preANA.xml'),
+    try:
+        chdir(writer2LaTeX_path)
+        for filename in odt_file_names:
+            arguments = ['-config', join('config', 'preANA.xml'),
                 join(working_directory, filename+'.odt'),#the input odt file path
                 join(outputconvert, filename+'.tex')]#the output tex file in a subfolder
-        subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
-    chdir(origWD)
+            subprocess.call(['java', '-jar', 'writer2latex.jar'] + arguments)
+        chdir(origWD)
+    except FileNotFoundError:
+        print("Didnt found writer2latex, processing…")
 
 def concatenate(odt_file_names, tex_files, output):#only concatenate the  tex or .odt files run in a first time (before processing them and before processing the non tex nor odt ones)
     concat_filepath = join(output, 'concat.tex')
