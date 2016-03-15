@@ -7,6 +7,7 @@ from ANA_Objects import Nucleus, Candidat, Occurrence, Page
 import json
 from csv import writer
 import copy
+import treetaggerwrapper#to create a catégory 'is a verb' in output
 
 global rm_accent
 rm_accent = {'é':'e', 'è':'e', 'ê':'e', 'ë':'e', 'ù':'u', 'û':'u', 'ü':'u','ç':'c', 'ô':'o', 'ö':'o', 'œ':'oe', 'î':'i', 'ï':'i', 'â':'a', 'à':'a', 'ä':'a'}
@@ -112,7 +113,7 @@ def build_wordset(*args):#arg should be a file path
     for wordlist_file_path in args:
         with open(wordlist_file_path, 'r', encoding='utf8') as wordlistfile:
             lines = wordlistfile.readlines()
-            wordsset |= (set([re.sub(r'\n', '', s.lower()) for s in lines]))
+            wordsset |= set([re.sub(r'\n$', '', s.lower()) for s in lines if s!='\n' ])
     return wordsset
 
 def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1, d:1, au:2, aux:2, en:3}
@@ -183,8 +184,6 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                     if re.match(r'\.|\?|\!', word):
                         dotahead = True
                 elif word.lower() in emptywords or Rnumeral.match(word) or Rponctuation.match(word) or Rextraemptyword.match(word):
-                    if Rextraemptyword.match(word):
-                        print(word)
                     OCC[index] = Occurrence(long_shape = word)
                     dotahead = False
                 elif Rdate.match(word):#IDEA is it interesting to have dates as tword?
@@ -254,6 +253,19 @@ def areforbidden(non_solo_file_path, CAND, OCC):
                 break#once nuc_idi is forbidden, no need to search how many times it is forbidden...!
     return forbidden_cand_idi
 
+def areverbs(dict_candshape):
+    verbasedcand = {}
+    tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
+    for idi in dict_candshape:
+        verbasedcand[idi] = False
+        tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
+        taglist = treetaggerwrapper.make_tags(tags)
+        for tag in taglist:
+            print(tag.word)
+            if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
+                verbasedcand[idi] = True
+    return verbasedcand
+
 #TODO improve this function that only works on the final shape of the cand and does the job a minima...
 def merge_similar_cands(dict_candshape, CAND, OCC):
     simplshape_dict = {}
@@ -274,6 +286,7 @@ def write_output(CAND, OCC, PAGES):
     forbid_cand_id_set = areforbidden('non_solo.txt', CAND, OCC)#check throught soft eguality if a CAND shape is in the forbidden list
     dict_candshape = cand_final_shapes(CAND, OCC)
     CAND, dict_candshape = merge_similar_cands(dict_candshape, CAND, OCC)
+    verbasedcand = areverbs(dict_candshape)
     inpage = {}
     wherekey = {}
     alone = {}
@@ -299,8 +312,8 @@ def write_output(CAND, OCC, PAGES):
         json.dump(inpage, what_inpage, ensure_ascii=False, indent=4)
     with open('output/keywords.csv', 'w') as csvfile:
         keyfile = writer(csvfile)
-        header = ['cand_id', 'max occurring shape', 'occurrences','in only 1 fiche', 'groups', 'merge with']
+        header = ['cand_id', 'max occurring shape', 'occurrences','in only 1 fiche', 'is_verb_based', 'groups', 'merge with']
         keyfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
-                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), alone[idi], '', ''])
+                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), alone[idi], verbasedcand[idi],'', ''])

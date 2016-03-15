@@ -1,3 +1,8 @@
+#Dépendances
+## Optionnel mais recommandé:
+treetagger developpés respectivement par le departement de Computational Linguistics de University of Stuttgart
+wrapper python pour treetagger developpé par Laurent Pointal du CNRS LMSI
+
 # Future Developpements:
 ## L2P:
 -  permettre de réécrire/corriger/supprimer (superviser l'étape) les fiches.

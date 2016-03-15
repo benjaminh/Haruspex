@@ -4,6 +4,11 @@
 !
 ?
 .
+pouvez
+pourriez
+mettant
+
+intéressant
 in
 vaut
 vallait
@@ -163,6 +168,7 @@ font
 fait
 faite
 faits
+faisais
 faisait
 faisaient
 fais
@@ -247,6 +253,7 @@ dis
 disait
 disais
 parlait
+parler
 c
 footnote
 includegraphics
