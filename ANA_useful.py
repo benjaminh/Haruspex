@@ -7,7 +7,10 @@ from ANA_Objects import Nucleus, Candidat, Occurrence, Page
 import json
 from csv import writer
 import copy
-import treetaggerwrapper#to create a catégory 'is a verb' in output
+try:
+    import treetaggerwrapper#to create a catégory 'is a verb' in output
+except ImportError:
+    print('ALERT no treetagger install for this python version')
 
 global rm_accent
 rm_accent = {'é':'e', 'è':'e', 'ê':'e', 'ë':'e', 'ù':'u', 'û':'u', 'ü':'u','ç':'c', 'ô':'o', 'ö':'o', 'œ':'oe', 'î':'i', 'ï':'i', 'â':'a', 'à':'a', 'ä':'a'}
@@ -258,12 +261,13 @@ def areverbs(dict_candshape):
     tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
     for idi in dict_candshape:
         verbasedcand[idi] = False
-        tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
-        taglist = treetaggerwrapper.make_tags(tags)
-        for tag in taglist:
-            print(tag.word)
-            if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
-                verbasedcand[idi] = True
+        try:
+            tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
+            taglist = treetaggerwrapper.make_tags(tags)
+            for tag in taglist:
+                print(tag.word)
+                if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
+                    verbasedcand[idi] = True
     return verbasedcand
 
 #TODO improve this function that only works on the final shape of the cand and does the job a minima...
