@@ -128,13 +128,20 @@ def build_linkdict(linkwords_file_path):# basicaly in french {de:1, du:1, des:1,
 
 def build_regex(wordlist_file_path):
     wordset = build_wordset(wordlist_file_path)
-    regexlist = [word.strip() + '.?.?' for word in wordset if word]#two extra last characters are authorized
+    regexlist = [word.strip() + '.?.?' if len(word)>3 and not re.findall(r'\\|\.|\*|\+', word) else word.strip() for word in wordset]#two extra last characters are authorized except for allready regex or shortwords
     if regexlist:
         regex = r'|'.join(regexlist) + r'(?siu)'
         return re.compile(regex)
     else:
         return re.compile(' ')#FIXME I need a regex that will never match, a None regex, here the space will never match since we process only words
 
+def str_simplify(string):
+    '''remove accents and comon final french letters "e", "s", "ent"'''
+    ascii_shape = ''.join([rm_accent[caract] if caract in rm_accent else caract for caract in string.lower()]) #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
+    ascii_shape = re.sub(r's$', '', ascii_shape)#remove final s of the word
+    ascii_shape = re.sub(r'e$', '', ascii_shape)#remove final e
+    ascii_shape = re.sub(r'nt$', '', ascii_shape)#remove final nt
+    return ''.join(ascii_shape)
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
 def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptywords_file_path, extra_emptywords_file_path, linkwords_file_path, bootstrap_file_path, match_propernouns, working_directory):
@@ -163,22 +170,21 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                 index += 1
                 matchbootstrap = False
                 if Rsplitermark.match(word):
-                    #TODO page_id = get the id of the splitmarker, or build it
                     if page_id:#the first markers of the page will not ask to close a previous page
                         PAGES[page_id].where += (index,)#close the previous page, the var page_id is still the previous version
                     page_id = re.findall(r'([\_|\d]+)', word)[0]#get the new page id
                     PAGES[page_id] = Page(begin=index+1, idi=page_id)#a page object, init "where" with begining of the next page
                     index -= 1#otherwise there is a missing OCC key in the OCC dict
-                elif word in linkwords:
-                    OCC[index] = Occurrence(long_shape = word, linkword = linkwords[word])
+                elif word.lower() in linkwords:
+                    OCC[index] = Occurrence(long_shape = word, linkword = linkwords[word.lower()])
                     dotahead = False
                 elif word.lower() in stopwords or Rextrastopword.match(word):
-                    # if Rextrastopword.match(word):
-                    #     print(word)
                     OCC[index] = Occurrence(long_shape = word, stopword = True)
                     if re.match(r'\.|\?|\!', word):
                         dotahead = True
                 elif word.lower() in emptywords or Rnumeral.match(word) or Rponctuation.match(word) or Rextraemptyword.match(word):
+                    if Rextraemptyword.match(word):
+                        print(word)
                     OCC[index] = Occurrence(long_shape = word)
                     dotahead = False
                 elif Rdate.match(word):#IDEA is it interesting to have dates as tword?
@@ -188,11 +194,12 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                     OCC[index] = Occurrence(long_shape = word, tword = True)
                     for indice in bootstrap:#bootstrap is a dict Occurrences objects
                         if OCC[index].soft_equality(bootstrap[indice]):
-                            occ2boot.setdefault(indice, set()).add(tuple([index]))
+                            occ2boot.setdefault(indice, set()).add(tuple([index]))#index as tuple to easily build normal cand position (allways a tuple of positions)
                             matchbootstrap = True#not be in conflict with the propernouns below
                             continue
                     if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
-                        propernouns.setdefault(word, set()).add(tuple([index]))
+                        simplshape = str_simplify(word)#to avoid differences like Échalas / ECHALAS  (they'll build to branches and never merge until the end)
+                        propernouns.setdefault(simplshape, set()).add(tuple([index]))
         if page_id:
             PAGES[page_id].where += (index,)#closing the last page
         for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
@@ -216,13 +223,7 @@ def build_OCC(txt4ana, stopwords_file_path, extra_stopwords_file_path, emptyword
                 #FIXME how to build Atelier et Chantier if Atelier and Chantier are allready cands -> no linkword, nothing helps to build it!
                 #TODO build neo4j nods corresponding to the pages. (should have been done before, in preANA step)
 
-def str_simplify(string):
-    '''remove accents and comon final french letters "e", "s", "ent"'''
-    ascii_shape = ''.join([rm_accent[caract] if caract in rm_accent else caract for caract in string.lower()]) #if charac in the dict of accentuated charact, then replace it by its non-accentuated match
-    ascii_shape = re.sub(r's$', '', ascii_shape)#remove final s of the word
-    ascii_shape = re.sub(r'e$', '', ascii_shape)#remove final e
-    ascii_shape = re.sub(r'nt$', '', ascii_shape)#remove final nt
-    return ''.join(ascii_shape)
+
 
 def cand_final_shapes(CAND, OCC):
     #dict_candshape is a dict {key: cand_id ; value: {"max_occ_shape": "str"; "shortest_shape": "str"; DBpediashape }
@@ -257,7 +258,7 @@ def areforbidden(non_solo_file_path, CAND, OCC):
 def merge_similar_cands(dict_candshape, CAND, OCC):
     simplshape_dict = {}
     for idi in dict_candshape:
-        simpl_shape = ' '.join([str_simplify(word) for word in Rwordsinline.findall(dict_candshape[idi]['shortest_shape'])])
+        simpl_shape = ' '.join([str_simplify(word) for word in Rwordsinline.findall(dict_candshape[idi]["max_occ_shape"])])
         simplshape_dict.setdefault(simpl_shape, []).append(idi)
     for shape in simplshape_dict:
         if len(simplshape_dict[shape])>1:
@@ -269,14 +270,13 @@ def merge_similar_cands(dict_candshape, CAND, OCC):
     return CAND, dict_candshape
 
 
-
-
 def write_output(CAND, OCC, PAGES):
     forbid_cand_id_set = areforbidden('non_solo.txt', CAND, OCC)#check throught soft eguality if a CAND shape is in the forbidden list
     dict_candshape = cand_final_shapes(CAND, OCC)
     CAND, dict_candshape = merge_similar_cands(dict_candshape, CAND, OCC)
     inpage = {}
     wherekey = {}
+    alone = {}
     for page_idi in PAGES:
         page_end = PAGES[page_idi].where[1]
         page_begin = PAGES[page_idi].where[0]
@@ -287,19 +287,20 @@ def write_output(CAND, OCC, PAGES):
                         inpage.setdefault(page_idi, []).append(cand_idi)
                         wherekey.setdefault(cand_idi, []).append(page_idi)
     print('\n\n###### writting output')
-    print('\nKEYWORDS that won\'t build links because they come from only ONE FICHE')
     for cand_idi, pages_occs in wherekey.items():
         pageset = set(pages_occs)
         if len(pageset) == 1:
-            print(pageset.pop(), '-', str(len(CAND[cand_idi].where)), '-', dict_candshape[cand_idi]["max_occ_shape"])
+            alone[cand_idi] = True
+        else:
+            alone[cand_idi] = False
     with open('intra/where_keyword.json', 'w') as where_keyword:
         json.dump(wherekey, where_keyword, ensure_ascii=False, indent=4)
     with open('intra/what_inpage.json', 'w') as what_inpage:
         json.dump(inpage, what_inpage, ensure_ascii=False, indent=4)
     with open('output/keywords.csv', 'w') as csvfile:
         keyfile = writer(csvfile)
-        header = ['cand_id', 'max occurring shape', 'occurrences', 'groups', 'merge with']
+        header = ['cand_id', 'max occurring shape', 'occurrences','in only 1 fiche', 'groups', 'merge with']
         keyfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
-                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), '', ''])
+                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), alone[idi], '', ''])

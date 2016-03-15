@@ -27,7 +27,8 @@ def setup_dir():
     if not isfile('ANA/non_solo.txt'):
         open('ANA/non_solo.txt', 'a').close()#like "touch" in unix
     if not isfile('ANA/extra_emptywords.txt'):
-        open('ANA/extra_emptywords.txt', 'a').close()
+        with open('ANA/extra_emptywords.txt', 'a') as emptyregex:
+            emptyregex.write('^\w\w?$')
     if not isfile('ANA/extra_stopwords.txt'):
         open('ANA/extra_stopwords.txt', 'a').close()
     if not isfile('ANA/ana_config.json'):
@@ -36,7 +37,7 @@ def setup_dir():
         makedirs('ANA/intra/')#mapping, pages_pos,
     if not exists('toneo'):
         makedirs('toneo')#mapping, pages_pos,
-#TODO move_file in a subfolder, the L2P process should be adapted to 
+#TODO move_file in a subfolder, the L2P process should be adapted to
 
 
 with open('workingdirectory', 'r') as dirfile:
