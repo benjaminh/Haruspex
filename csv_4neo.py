@@ -6,6 +6,7 @@
 #TODO construire un csv "node_id", "node_id", "ponderation", "titre(validshape)", "categorie"
 #TODO csv import dans neo4j
 from py2neo import Graph, authenticate
+from py2neo.packages.httpstream import http
 import sys
 from os.path import join, exists
 from os import mkdir
@@ -108,6 +109,7 @@ def main(working_directory):
     print('linksfile have been written')
 
 def upload_relations(working_directory):
+    http.socket_timeout = 9999
     # Fichea = graph.find_one('Fiche', property_key='doc_position', property_value=page_ida)
     # Fiche = graph.find_one('Fiche', property_key='doc_position', property_value=page_ida)
     csvfile = 'file://'+join(working_directory, 'toneo', 'links.csv')
