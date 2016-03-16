@@ -268,6 +268,8 @@ def areverbs(dict_candshape):
                 print(tag.word)
                 if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
                     verbasedcand[idi] = True
+        except:
+            print("Error during the tagging of VERBS")
     return verbasedcand
 
 #TODO improve this function that only works on the final shape of the cand and does the job a minima...
