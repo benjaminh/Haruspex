@@ -38,9 +38,9 @@ def getvalidkeyword(working_directory):
         validkeys = {}
         for row in valids:
             if row[1]:
-                validkeys[row[0]] = {'shape': row[1], 'groups' : row[3], 'occurrences' : int(row[2])}
-            if row[4]:
-                equiv[row[0]] = row[4]
+                validkeys[row[0]] = {'shape': row[1], 'groups' : row[5], 'occurrences' : int(row[2])}
+            if row[6]:
+                equiv[row[0]] = row[6]
     validkeysmerged = merge_equiv(validkeys, equiv)
     return validkeysmerged, equiv
 
