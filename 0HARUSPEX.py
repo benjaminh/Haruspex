@@ -28,7 +28,7 @@ def setup_dir():
         open('ANA/non_solo.txt', 'a').close()#like "touch" in unix
     if not isfile('ANA/extra_emptywords.txt'):
         with open('ANA/extra_emptywords.txt', 'a') as emptyregex:
-            emptyregex.write('^\w\w?$')
+            emptyregex.write('^\w.?$')
     if not isfile('ANA/extra_stopwords.txt'):
         open('ANA/extra_stopwords.txt', 'a').close()
     if not isfile('ANA/ana_config.json'):
