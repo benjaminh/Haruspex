@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-
-#TODO where_keyword and what_inpage as outputs dans ANA2
-#TODO tf-idf en tenant compte du csv modéré de ana2
-#TODO construire un csv "node_id", "node_id", "ponderation", "titre(validshape)", "categorie"
-#TODO csv import dans neo4j
 from py2neo import Graph, authenticate
 from py2neo.packages.httpstream import http
 import sys

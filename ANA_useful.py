@@ -7,6 +7,8 @@ from ANA_Objects import Nucleus, Candidat, Occurrence, Page
 import json
 from csv import writer
 import copy
+import requests
+from bs4 import BeautifulSoup
 try:
     import treetaggerwrapper#to create a catégory 'is a verb' in output
 except ImportError:
@@ -242,7 +244,7 @@ def cand_final_shapes(CAND, OCC):
         for shape in sorted(max_occ_shape, key=max_occ_shape.get, reverse = True):
             max_occS = shape
             break
-        dict_candshape[cand_id] = {"max_occ_shape": max_occS, "shortest_shape": shortest_shape, "DBpediashape": None }
+        dict_candshape[cand_id] = {"max_occ_shape": max_occS, "shortest_shape": shortest_shape }
     return dict_candshape
 
 def areforbidden(non_solo_file_path, CAND, OCC):
@@ -265,12 +267,35 @@ def areverbs(dict_candshape):
             tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
             taglist = treetaggerwrapper.make_tags(tags)
             for tag in taglist:
-                print(tag.word)
                 if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
                     verbasedcand[idi] = True
         except:
             print("Error during the tagging of VERBS")
     return verbasedcand
+
+def get_wikidata(dict_candshape, CAND):
+    print('\nSearching on wikipedia for categories, portails, normalized shapes...')
+    proxies = {
+      'http': 'http://proxy.irccyn.ec-nantes.fr:3128',
+      'https': 'https://proxy.irccyn.ec-nantes.fr:3128',
+    }
+    dict_categories = {}
+    for idi, shapes in dict_candshape.items():
+        keyword = re.sub(' ', '_', shapes["max_occ_shape"])
+        wikipage = requests.get('http://fr.wikipedia.org/w/index.php?title='+keyword+'&printable=yes', proxies=proxies)
+        if not re.search('404', str(wikipage)):
+            soup = BeautifulSoup(wikipage.text, 'html.parser')
+            title = soup.title
+            cleantitle = re.findall(r'(?<=<title>)([^—]*)(?=—)', str(title))
+            shapes["Wikipedia_shape"] = cleantitle[0]
+            portails = soup.find(id="bandeau-portail")
+            portnames = re.findall(r'(?<=title="Portail:)([^\"]*)(?=\")', str(portails))
+            dict_categories[idi] = '; '.join(portnames)
+        else:
+            shapes["Wikipedia_shape"] = ''
+            dict_categories[idi] = ''
+    return dict_candshape, dict_categories
+
 
 #TODO improve this function that only works on the final shape of the cand and does the job a minima...
 def merge_similar_cands(dict_candshape, CAND, OCC):
@@ -288,11 +313,15 @@ def merge_similar_cands(dict_candshape, CAND, OCC):
     return CAND, dict_candshape
 
 
+
+
+
 def write_output(CAND, OCC, PAGES):
     forbid_cand_id_set = areforbidden('non_solo.txt', CAND, OCC)#check throught soft eguality if a CAND shape is in the forbidden list
     dict_candshape = cand_final_shapes(CAND, OCC)
     CAND, dict_candshape = merge_similar_cands(dict_candshape, CAND, OCC)
     verbasedcand = areverbs(dict_candshape)
+    dict_candshape, dict_categories = get_wikidata(dict_candshape, CAND)
     inpage = {}
     wherekey = {}
     alone = {}
@@ -318,8 +347,8 @@ def write_output(CAND, OCC, PAGES):
         json.dump(inpage, what_inpage, ensure_ascii=False, indent=4)
     with open('output/keywords.csv', 'w') as csvfile:
         keyfile = writer(csvfile)
-        header = ['cand_id', 'max occurring shape', 'occurrences','in only 1 fiche', 'is_verb_based', 'groups', 'merge with']
+        header = ['cand_id', 'max occurring shape', 'Wikipedia_shapeshape', 'occurrences','in only 1 fiche', 'is_verb_based', 'groups', 'merge with']
         keyfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
-                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], len(CAND[idi].where), alone[idi], verbasedcand[idi],'', ''])
+                keyfile.writerow([idi, dict_candshape[idi]["max_occ_shape"], dict_candshape[idi]["Wikipedia_shape"], len(CAND[idi].where), alone[idi], verbasedcand[idi], dict_categories[idi], ''])
