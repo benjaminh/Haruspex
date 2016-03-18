@@ -33,9 +33,9 @@ def getvalidkeyword(working_directory):
         validkeys = {}
         for row in valids:
             if row[1]:
-                validkeys[row[0]] = {'shape': row[1], 'groups' : row[5], 'occurrences' : int(row[2])}
-            if row[6]:
-                equiv[row[0]] = row[6]
+                validkeys[row[0]] = {'shape': row[1], 'wikipedia_shape': row[2],'groups' : row[6], 'occurrences' : int(row[3])}
+            if row[7]:
+                equiv[row[0]] = row[7]
     validkeysmerged = merge_equiv(validkeys, equiv)
     return validkeysmerged, equiv
 
@@ -58,6 +58,7 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
                         done.add(linked)
                         if valid_keywords[key]['groups']:
                             group = valid_keywords[key]['groups']
+                            print(group)
                         else:
                             group = 'NULL'
                         if valid_keywords[key]['occurrences']:

@@ -260,17 +260,19 @@ def areforbidden(non_solo_file_path, CAND, OCC):
 
 def areverbs(dict_candshape):
     verbasedcand = {}
-    tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
-    for idi in dict_candshape:
-        verbasedcand[idi] = False
-        try:
+    try:# TreeTagger is optional...
+        tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
+        for idi in dict_candshape:
+            verbasedcand[idi] = False
             tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
             taglist = treetaggerwrapper.make_tags(tags)
             for tag in taglist:
                 if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
                     verbasedcand[idi] = True
-        except:
-            print("Error during the tagging of VERBS")
+    except:
+        print("\nALERT Error during the tagging of VERBS; did you install treeTagger?")
+        for idi in dict_candshape:
+            verbasedcand[idi] = 'no TreeTagger'
     return verbasedcand
 
 def get_wikidata(dict_candshape, CAND):
@@ -279,6 +281,8 @@ def get_wikidata(dict_candshape, CAND):
       'http': 'http://proxy.irccyn.ec-nantes.fr:3128',
       'https': 'https://proxy.irccyn.ec-nantes.fr:3128',
     }
+    #TODO store the different portals explored
+    #TODO if page is redirected to desambiguation page: folow the links and choose with the allready explored portals
     dict_categories = {}
     for idi, shapes in dict_candshape.items():
         keyword = re.sub(' ', '_', shapes["max_occ_shape"])
@@ -347,7 +351,7 @@ def write_output(CAND, OCC, PAGES):
         json.dump(inpage, what_inpage, ensure_ascii=False, indent=4)
     with open('output/keywords.csv', 'w') as csvfile:
         keyfile = writer(csvfile)
-        header = ['cand_id', 'max occurring shape', 'Wikipedia_shapeshape', 'occurrences','in only 1 fiche', 'is_verb_based', 'groups', 'merge with']
+        header = ['cand_id', 'max occurring shape', 'Wikipedia_shape', 'occurrences','in only 1 fiche', 'is_verb_based', 'groups', 'merge with']
         keyfile.writerow(header)
         for idi in CAND:
             if idi not in forbid_cand_id_set:
