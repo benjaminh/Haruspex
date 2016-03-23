@@ -4,6 +4,7 @@ from os import walk, getcwd, chdir, makedirs
 from os.path import splitext, isfile, join, split, abspath, exists
 import re
 import subprocess
+import unicodedata
 
 def setup_dir():
     if not exists(join('pages', 'convertconcat', 'convert')):
@@ -50,6 +51,7 @@ def concatenate2(other_files, output):#concatenate the "other files" (non tex, n
             with open(txtfile_name) as infile:
                 for line in infile:
                     line = re.sub(r'ʽ|՚|‘|‛|‵|ʾ|\'|ʿ|ʼ|΄|´|´|′|Ꞌ|ꞌ|ʹ|ˈ|‘|’|ʽ|ʼ|’', '\'', line)#this is done for the tex and odt files, but we need to purge the diacritics averywhere!
+                    line = ''.join(c for c in line if (not unicodedata.category(c).startswith("C") or c == '\n')) #Avoid non printable characters coming from PDF's conversion
                     concat_file.write(line)
 
 
