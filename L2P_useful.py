@@ -28,6 +28,14 @@ def writer2latex(writer2LaTeX_path, odt_file_names, outputconvert, working_direc
     except FileNotFoundError:
         print("Didnt found writer2latex, processing…")
 
+# conversion of pdf files into txt
+# results may vary depending on pdf quality
+def pdftotext(pdffile, filename):
+    try:
+        subprocess.call(["pdftotext", pdffile, filename + '.txt'])
+    except:
+        print('Didnt find pdftotext command. Check if this program is installed. Be aware that this option is only available on Linux OS.')
+
 def concatenate(odt_file_names, tex_files, output):#only concatenate the  tex or .odt files run in a first time (before processing them and before processing the non tex nor odt ones)
     concat_filepath = join(output, 'concat.tex')
     with open(concat_filepath, 'w') as concat_file:
@@ -76,6 +84,10 @@ def concat_others(working_directory):
     other_files = set()
     for f in  next(walk(working_directory))[2]:#file_list is a list of NON-absolute path to original files in working dir
         filename, file_extension = splitext(f)
-        if file_extension != '.odt' and file_extension != '.tex':
+        filename = ''.join(c for c in filename if (not unicodedata.category(c).startswith("C"))) #Avoid non printable characters coming from PDF's conversion
+        if file_extension == '.pdf':
+            pdftotext(f, filename)
+            other_files.add(filename + '.txt')
+        elif file_extension != '.odt' and file_extension != '.tex':
             other_files.add(f)
     concatenate2(other_files, output)
