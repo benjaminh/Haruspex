@@ -1,4 +1,6 @@
 {
+    "lang":"fr",
+    "soft_equality_threshold": 7,
     "global_steps": 3,
     "nucleus_nestedsteps": 3,
     "recession_threshold": 3,
@@ -10,10 +12,18 @@
         2,
         2
         ],
-    "bootstrap": "bootstrap",
     "automaticsteps": false,
-    "txt4ana": "txt4ana",
-    "extra_emptywords":"extra_emptywords.txt",
-    "extra_stopwords":"extra_stopwords.txt",
-    "propernouns": true
+    "propernouns": true,
+    "propernouns_based_search": true,
+    "request_wikipedia": true,
+    "try_desambiguation": true,
+    "proxies": {
+      "http": "",
+      "https": ""
+  },
+    "short_expre_before": true,
+    "consumer_key": "",
+    "consumer_secret": "",
+    "access_token": "",
+    "access_secret": ""
 }

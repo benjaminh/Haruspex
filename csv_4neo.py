@@ -33,9 +33,9 @@ def getvalidkeyword(working_directory):
         validkeys = {}
         for row in valids:
             if row[1]:
-                validkeys[row[0]] = {'shape': row[1], 'wikipedia_shape': row[2],'groups' : row[6], 'occurrences' : int(row[3])}
-            if row[7]:
-                equiv[row[0]] = row[7]
+                validkeys[row[0]] = {'shape': row[1], 'wikipedia_shape': row[2],'groups' : row[6],'groups_confidence': row[7], 'occurrences' : int(row[3])}
+            if row[8]:
+                equiv[row[0]] = row[8]
     validkeysmerged = merge_equiv(validkeys, equiv)
     return validkeysmerged, equiv
 
@@ -58,7 +58,6 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
                         done.add(linked)
                         if valid_keywords[key]['groups']:
                             group = valid_keywords[key]['groups']
-                            print(group)
                         else:
                             group = 'NULL'
                         if valid_keywords[key]['occurrences']:
@@ -120,7 +119,7 @@ LOAD CSV WITH HEADERS
 FROM "csvfile" AS csvLine
 MATCH (node1:fiche { doc_position: csvLine.fichea })
 MATCH (node2:fiche { doc_position: csvLine.ficheb })
-MERGE (node1)-[r:keyword { name: csvLine.keyword , occurrences : toInt(csvLine.occurrences), weight: toInt(csvLine.tf_idf) , groups: csvLine.groups }]->(node2)
+MERGE (node1)-[r:keyword { name: csvLine.keyword , wikiname: csvLine.wikipedia_shape , occurrences : toInt(csvLine.occurrences), weight: toInt(csvLine.tf_idf) , groups: csvLine.groups, groups_confidence: csvLine.groups_confidence}]->(node2)
 '''.replace('csvfile',csvfile)
     graph_db.cypher.execute(loadquery)
 

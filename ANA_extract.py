@@ -9,7 +9,7 @@ from ANA_Objects import Nucleus, Candidat, Occurrence
 ##########################
 ####### nucleus ##########
 ##########################
-def nucleus_step(OCC, CAND, nucleus_threshold):
+def nucleus_step(OCC, CAND, config):
     #nucleus_threshold should be tuple formated like "vector" (see above)
     twords_dict = {}
     for cand in CAND:
@@ -18,14 +18,14 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
     twordsmerged = ANA_useful.merge_egal_sple_dict(OCC,twords_dict)
     #twordsmerged {key: tuple of (twords_position); value: list of tuples(link_word_type, cand_id)}
     for case in twordsmerged:
-        if len(twordsmerged[case]) > min(nucleus_threshold):
+        if len(twordsmerged[case]) > min(config['nucleus_threshold']):
             vector = ANA_useful.count_nuc_cases(twordsmerged[case])
                 #vector is tuple like this
                 # s1: same linkword same CAND
                 # s2: same linkword, different CAND
                 # s3: different linkword, same CAND
                 # s4: different linkword, different CAND
-            if any([True for x in range(4) if vector[x] >= nucleus_threshold[x]]):
+            if any([True for x in range(4) if vector[x] >= config['nucleus_threshold'][x]]):
                 next_id = max(CAND) + 1
                 positions = set([tuple([position]) for position in case]) #we want a set of tuple of position presented like this set([(1,), (3,), (6,)])
                 CAND[next_id] = Nucleus(idi = next_id, where = positions)#new CAND is created
@@ -37,12 +37,14 @@ def nucleus_step(OCC, CAND, nucleus_threshold):
 ###### expansion #########
 ##########################
 
-def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
+def exp_step(OCC, CAND, config):
     CAND2build = {}# storing the CAND to be created while looping in the dict
     done = set()# to avoid expre conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
     forbid = set()#set of occ positions allready "seen"
     exprewin = {}
     valid_exprewin = {}
+    expression_threshold = int(config['expression_threshold'])
+    expansion_threshold = int(config['expansion_threshold'])
     for cand_id in CAND:
         expawin = CAND[cand_id].expa_window(OCC)# {t_word_pos: tuple_cand_positions)
         expre_where, expre_what = CAND[cand_id].expre_window(OCC)
@@ -92,7 +94,8 @@ def exp_step(OCC, CAND, expression_threshold, expansion_threshold):
 ####### recession#########
 ##########################
 
-def recession_step(OCC, CAND, recession_threshold):
+def recession_step(OCC, CAND, config):
+    recession_threshold = int(config['recession_threshold'])
     todel = set()
     for idi in CAND:
         if CAND[idi].recession(recession_threshold, OCC, CAND):
