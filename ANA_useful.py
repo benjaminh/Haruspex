@@ -292,6 +292,7 @@ def continuewikireq(wiki, parametres, proxies, headers, auth):
             result = requests.get(wiki, params= parametres, proxies=proxies, headers=headers, auth=auth).json()
             if 'error' in result:
                 if result['error']['code'] == 'maxlag':
+                    print('waiting 5sec for wikipedia server')
                     time.sleep(5)
                     result['continue']= lastContinue
                 else:
@@ -303,6 +304,9 @@ def continuewikireq(wiki, parametres, proxies, headers, auth):
             if 'continue' not in result:
                 break
             lastContinue = result['continue']
+            if not 'pages' in results:
+                print('problem:', parametres, results)
+                results['pages'] = []
     return results
 
 def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest, auth):
@@ -327,35 +331,42 @@ def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visi
         if sli:
             request2['titles'] = '|'.join(sli)
             dict_rep2 = continuewikireq(wiki, request2, proxies, headers, auth)
-            for page in dict_rep2['pages']:
-                idi = cand_idi_bywikishape[page['title']]#cand_idi corresponding to the pages
-                if 'links' in page:
+            try:
+                for page in dict_rep2['pages']:
+                    idi = cand_idi_bywikishape[page['title']]#cand_idi corresponding to the pages
                     if re.search(r'[A-Z_\.]{2,}', page['title']):
                         goodlinks = [link['title'] for link in page['links'] if re.findall(page['title']+'| (?siu)', link['title'])]#composed of several words (separed by space)
                     else:
                         goodlinks = [link['title'] for link in page['links'] if re.findall(page['title']+'(?siu)', link['title'])][:20]#contain page title
                     #if there is more than xx goodlinks then it's a very common name, not useful
-                    if goodlinks:
-                        request3['titles'] = '|'.join(goodlinks)
-                        dict_rep3 = continuewikireq(wiki, request3, proxies, headers, auth)
-                        max_confidence = 0
+                    request3['titles'] = '|'.join(goodlinks)
+                    dict_rep3 = continuewikireq(wiki, request3, proxies, headers, auth)
+                    max_confidence = 0
+                    try:
                         for page in dict_rep3['pages']:
-                            if 'links' in page:
-                                portals = [re.sub(r'Po.*?:', '', link['title']) for link in page['links']]
-                                confidence = sum([visitedportals[portal] for portal in portals if portal in visitedportals])/(denominator*len(goodlinks)/10)
-                                if set(portals) <= set(visitedportals):
-                                    confidence+=0.2#bonus if nothing out of subject!
-                                if confidence > max_confidence:
-                                    max_confidence = confidence
-                                    best_portals = portals
-                                    best_title = page['title']
+                            portals = [re.sub(r'Po.*?:', '', link['title']) for link in page['links']]
+                            confidence = sum([visitedportals[portal] for portal in portals if portal in visitedportals])/(denominator*len(goodlinks)/10)
+                            if set(portals) <= set(visitedportals):
+                                confidence+=0.2#bonus if nothing out of subject!
+                            if confidence > max_confidence:
+                                max_confidence = confidence
+                                best_portals = portals
+                                best_title = page['title']
+                            elif max_confidence == 0:
+                                best_portals = ''
+                                best_title = page['title']
                         dict_candshape[idi]['Wikipedia_portals'] = best_portals
                         dict_candshape[idi]['portals_confidence'] = max_confidence
                         dict_candshape[idi]['Wikipedia_shape'] = best_title
                         if max_confidence > highestconfidence:
                             highestconfidence = max_confidence
+                    except KeyError:
+                        pass
+            except KeyError:
+                pass
+        time.sleep(3)
     for idi in dict_candshape:
-        if 'portals_confidence' in dict_candshape[idi]:
+        if type(dict_candshape[idi]['portals_confidence']) is float:
             dict_candshape[idi]['portals_confidence'] = dict_candshape[idi]['portals_confidence'] / highestconfidence
     return dict_candshape
 
