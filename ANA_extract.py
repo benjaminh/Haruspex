@@ -10,6 +10,7 @@ from ANA_Objects import Nucleus, Candidat, Occurrence
 ####### nucleus ##########
 ##########################
 def nucleus_step(OCC, CAND, config):
+    newnucs_idis = []
     #nucleus_threshold should be tuple formated like "vector" (see above)
     twords_dict = {}
     for cand in CAND:
@@ -29,7 +30,8 @@ def nucleus_step(OCC, CAND, config):
                 next_id = max(CAND) + 1
                 positions = set([tuple([position]) for position in case]) #we want a set of tuple of position presented like this set([(1,), (3,), (6,)])
                 CAND[next_id] = Nucleus(idi = next_id, where = positions)#new CAND is created
-                CAND[next_id].buildnuc(OCC, CAND)
+                newnucs_idis.append(next_id)
+    ANA_useful.dispatch_buildnuc(newnucs_idis, CAND, OCC)
 
 ##########################
 ###### expression ########

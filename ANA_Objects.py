@@ -38,7 +38,7 @@ class Occurrence:
     def _unlink(self):
         '''
         this function discard the tuple of occ_pos stored in the cand.where
-        but  it does this for eac
+        but  it does this for each occ of the canbd positions (not very efficient...)
         '''
         if self.cand:
             #TODO: old_pos trie plusieurs fois la même chose, (pour chaq occurrence lié au cand) -> pas très efficace
@@ -63,6 +63,8 @@ class Occurrence:
             self._recession(CAND)
 
     def _recession(self, CAND):
+        # if len(self.hist)==1:
+        #     print(self.long_shape, self.cand, self.cand_pos, self.hist)
         if len(self.hist)>1:
             self.cand, self.cand_pos = self.hist.pop()# the initial state is stored as cand=0 in history
         else:# retrieve the initial state of the occ (not a CAND )
@@ -311,29 +313,28 @@ class Nucleus(Candidat):
     def _representatives(self, OCC):
         shape_represent = set()
         for where in self.where:# where is a tuple of a single integer eg: (45,) -> where[0] get an occ_pos
-            if OCC[where[0]].long_shape not in self.shape_represent:
-                self.shape_represent.add(OCC[where[0]].long_shape)
+            if OCC[where[0]].long_shape.lower() not in self.shape_represent:
+                self.shape_represent.add(OCC[where[0]].long_shape.lower())
                 self.occ_represent.add(where[0])
 
     def _update_representatives(self, occ_pos, OCC):
-        if OCC[occ_pos].long_shape not in self.shape_represent:
-            self.shape_represent.add(OCC[occ_pos].long_shape)
+        if OCC[occ_pos].long_shape.lower() not in self.shape_represent:
+            self.shape_represent.add(OCC[occ_pos].long_shape.lower())
             self.occ_represent.add(occ_pos)
 
     def _search_all_twords(self, OCC):
         for occ_pos in OCC:
             if OCC[occ_pos].tword:
-                #TODO evaluate if this is too slow and not a good benefit for word spoting
                 for occ_pos_repr in self.occ_represent:#try to match any of the shapes that allready matched
                     if (occ_pos,) not in self.where and OCC[occ_pos].soft_equality(OCC[occ_pos_repr]):# where is a tuple of a single integer eg: (45,) -> where[0] get an occ_pos
                         self.where.add((occ_pos,))#add the position (as a tuple of 1 integer) of the occurrence in soft equality
-                        self._update_representatives(occ_pos_repr, OCC)
+                        self._update_representatives(occ_pos, OCC)
                         break
 
     def buildnuc(self, OCC, CAND):
         self._representatives(OCC)
-        self._search_all_twords(OCC)#search for all the occurrences of this nex nucleus in the whole text
-        self.build(OCC, CAND)#transform the twords in nucleus
+        self._search_all_twords(OCC)#search for all the occurrences of this new nucleus in the whole text
+        return self.where, self.occ_represent, self.shape_represent
 
     def is_forbidden(self, forbidden_occinstance, OCC):
         '''run before writting results (at the end), theses cand may be used to build others, but not alone as a nucleus

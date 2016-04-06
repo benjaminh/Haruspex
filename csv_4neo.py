@@ -15,7 +15,8 @@ def calculate_idf(dict_bykey, dict_bypage):
     dict_idf = {}
     nb_pages = len(dict_bypage) #how many pages there are
     for keyword in dict_bykey:
-        idf = math.log10(nb_pages/len(set(dict_bykey[keyword])))
+        specifity = len(set(dict_bykey[keyword]))**2#in how many documents the key term appears
+        idf = math.log10(nb_pages/specifity)
         dict_idf[keyword] = idf
     return dict_idf
 
@@ -44,7 +45,7 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
     done = set()
     with open(join(working_directory, 'toneo', 'links.csv'), 'w') as csvfile:
         linksfile = csv.writer(csvfile)
-        header = ['fichea', 'ficheb', 'keyword', 'tf_idf', 'occurrences', 'groups']
+        header = ['fichea', 'ficheb', 'keyword', 'tf_idf', 'occurrences', 'groups', 'groups_confidence']
         linksfile.writerow(header)
         for key in dict_bykey: #each key in a page will be a link
             nb_occurrences_of_key_inpage = Counter(dict_bykey[key]) #return smth like {'pagenumber1': 2 ; 'pagenumber5': 3 ; 'pagenumberx': y}
@@ -64,7 +65,11 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
                             occurrences = valid_keywords[key]['occurrences']
                         else:
                             occurrences = 'NULL'
-                        linksfile.writerow([page_number, p_num, valid_keywords[key]['shape'], tfidf, occurrences, group])
+                        if valid_keywords[key]['groups_confidence']:
+                            confidence = valid_keywords[key]['groups_confidence']
+                        else:
+                            confidence = 'NULL'
+                        linksfile.writerow([page_number, p_num, valid_keywords[key]['shape'], tfidf, occurrences, group, confidence])
 
 def build_2_dicts(working_directory, valid_keywords, equiv):
     with open(join(working_directory, 'ANA', 'intra','where_keyword.json')) as where_keyword_file:
@@ -119,7 +124,7 @@ LOAD CSV WITH HEADERS
 FROM "csvfile" AS csvLine
 MATCH (node1:fiche { doc_position: csvLine.fichea })
 MATCH (node2:fiche { doc_position: csvLine.ficheb })
-MERGE (node1)-[r:keyword { name: csvLine.keyword , wikiname: csvLine.wikipedia_shape , occurrences : toInt(csvLine.occurrences), weight: toInt(csvLine.tf_idf) , groups: csvLine.groups, groups_confidence: csvLine.groups_confidence}]->(node2)
+MERGE (node1)-[r:keyword { name: csvLine.keyword , wikiname: coalesce(csvLine.wikipedia_shape, "") , occurrences : toInt(csvLine.occurrences), weight: toInt(csvLine.tf_idf) , groups: csvLine.groups, groups_confidence: coalesce(toInt(csvLine.groups_confidence), "")}]->(node2)
 '''.replace('csvfile',csvfile)
     graph_db.cypher.execute(loadquery)
 

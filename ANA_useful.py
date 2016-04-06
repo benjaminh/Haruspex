@@ -11,7 +11,7 @@ import requests
 from bs4 import BeautifulSoup
 from time import sleep, clock
 from requests_oauthlib import OAuth1
-
+import multiprocessing
 try:
     import treetaggerwrapper#to create a catégory 'is a verb' in output
 except ImportError:
@@ -159,6 +159,75 @@ def start_log(working_directory):
     starting = str(clock())
     logging.info('Started at' + starting)
 
+def slicelist(liste, slicelen=False, slicenum=False):
+    #slicing the list in sublists
+    if not slicelen:
+        slicelen = int(len(liste)/slicenum)+1
+    return [liste[i:i+slicelen] for i in range(0, len(liste), slicelen)]
+
+def worker(idis, candidats, occurrences, queue):
+    """processor parallel worker function"""
+    toupdate = {}
+    for idi in idis:
+        where, occ_repr, shape_repr = candidats[idi].buildnuc(occurrences, candidats)
+        toupdate[idi] = {'where': where, 'occ_repr': occ_repr, 'shape_repr': shape_repr}
+        queue.put(toupdate)
+    return
+
+def rejoindata(results, CAND, OCC):
+    for idi in results:
+        CAND[idi].where = results[idi]['where']
+        CAND[idi].occ_represent = results[idi]['occ_repr']
+        CAND[idi].shape_represent = results[idi]['shape_repr']
+        CAND[idi].build(OCC, CAND)#transform the twords in nucleus
+
+def queustayempty(q):
+    stayempty = False
+    step = 0.05
+    duration = 2
+    while not duration == 0 or not q.empty():
+        sleep(step)
+        duration-=step
+    if duration == 0:
+        stayempty = True
+    return stayempty
+
+
+def dispatch_buildnuc(newnucs_idis, CAND, OCC):
+    '''
+    newnucs_idis is a list of CAND id for new nuc
+    this function dispatch the newnucleuses search on several processors
+    this is the heaviest operation. Needs to be multiproc
+    '''
+    cpunum = len(os.sched_getaffinity(0))
+    q = multiprocessing.Queue()
+    parts = slicelist(liste=newnucs_idis, slicenum=cpunum)
+    proc = {}
+    for i in range(cpunum):
+        if i < len(parts):
+            proc[i] = multiprocessing.Process(target=worker, args=(parts[i], CAND, OCC, q))
+            proc[i].start()
+    results = {}
+    waited = 0
+    while True:
+        sleep(0.1)
+        waited+=1
+        if waited == 10:
+            break
+        if not q.empty():
+            break
+    while not q.empty():
+        while not q.empty():
+        #item in queue should be dict of dict/ key: cand_idi; value: {'where': where, 'occ_repr': occ_repr, 'shape_repr': shape_repr}
+            results.update(q.get())#there should not be any duplicate...
+        sleep(1)
+    for i in range(cpunum):
+        if i < len(parts):
+            proc[i].join()#waiting for each processor to finish
+    rejoindata(results, CAND, OCC)
+
+
+
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
 def build_OCC(Haruspexdir, working_directory, config):
     start_log(working_directory)
@@ -216,25 +285,27 @@ def build_OCC(Haruspexdir, working_directory, config):
                     if dotahead == False and word[0].isupper() and words.index(word) != 0 and matchbootstrap == False:#no dot before and uppercase and not begining of a newline -> it is a propernoun
                         simplshape = str_simplify(word)#to avoid differences like Échalas / ECHALAS  (they'll build to branches and never merge until the end)
                         propernouns.setdefault(simplshape, set()).add(tuple([index]))
-        if page_id:
-            PAGES[page_id].where += (index,)#closing the last page
-        for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
-            try:
-                next_id = max(CAND)+1
-            except ValueError:#this means it is the first cand, there is no value for max
-                next_id = 1
-            CAND[next_id] = Nucleus(idi = next_id, where = occ2boot[indice])
-            CAND[next_id].buildnuc(OCC, CAND)
-        if config['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
-            for propernoun in propernouns:
-                if len(propernouns[propernoun])>1:#if more than one occurrence of the propernoun has been found
-                    try:
-                        next_id = max(CAND)+1
-                    except ValueError:#this means it is the first cand, there is no value for max, so there is no bootstrap cand
-                        print('ALERT: No word in bootstrap file...')
-                        next_id = 1
-                    CAND[next_id] = Nucleus(idi = next_id, where = propernouns[propernoun])
-                    CAND[next_id].buildnuc(OCC, CAND)#
+    newnucs_idis = []
+    if page_id:
+        PAGES[page_id].where += (index,)#closing the last page
+    for indice in occ2boot:# building the cand from the all the occ matching with bootstrap words
+        try:
+            next_id = max(CAND)+1
+        except ValueError:#this means it is the first cand, there is no value for max
+            next_id = 1
+        CAND[next_id] = Nucleus(idi = next_id, where = occ2boot[indice])
+        newnucs_idis.append(next_id)
+    if config['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
+        for propernoun in propernouns:
+            if len(propernouns[propernoun])>1:#if more than one occurrence of the propernoun has been found
+                try:
+                    next_id = max(CAND)+1
+                except ValueError:#this means it is the first cand, there is no value for max, so there is no bootstrap cand
+                    print('ALERT: No word in bootstrap file...')
+                    next_id = 1
+                CAND[next_id] = Nucleus(idi = next_id, where = propernouns[propernoun])
+                newnucs_idis.append(next_id)
+    dispatch_buildnuc(newnucs_idis, CAND, OCC)
     return OCC, CAND, PAGES
 
 
@@ -364,10 +435,13 @@ def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visi
                         pass
             except KeyError:
                 pass
-        time.sleep(3)
+        sleep(3)
     for idi in dict_candshape:
-        if type(dict_candshape[idi]['portals_confidence']) is float:
-            dict_candshape[idi]['portals_confidence'] = dict_candshape[idi]['portals_confidence'] / highestconfidence
+        try:
+            if type(dict_candshape[idi]['portals_confidence']) is float:
+                dict_candshape[idi]['portals_confidence'] = dict_candshape[idi]['portals_confidence'] / highestconfidence
+        except KeyError:
+            pass
     return dict_candshape
 
 def first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, auth):
