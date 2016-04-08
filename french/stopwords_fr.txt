@@ -7,7 +7,6 @@
 pouvez
 pourriez
 mettant
-
 intéressant
 in
 vaut
@@ -269,6 +268,7 @@ tandis
 ensuite
 depuis
 puis
+mais
 lorsque
 lorsqu'
 lorsqu’

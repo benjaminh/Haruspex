@@ -8,8 +8,7 @@ import json
 from csv import writer
 import copy
 import requests
-from bs4 import BeautifulSoup
-from time import sleep, clock
+from time import sleep, localtime, time
 from requests_oauthlib import OAuth1
 import multiprocessing
 try:
@@ -156,8 +155,7 @@ def str_simplify(string):
 def start_log(working_directory):
     logfilepath = os.path.join(working_directory, 'log', 'ana.log')
     logging.basicConfig(filename=logfilepath, format='%(levelname)s:%(message)s', level=logging.INFO)
-    starting = str(clock())
-    logging.info('Started at' + starting)
+    logging.info('Started at' + str(localtime()))
 
 def slicelist(liste, slicelen=False, slicenum=False):
     #slicing the list in sublists
@@ -203,12 +201,14 @@ def dispatch_buildnuc(newnucs_idis, CAND, OCC):
     q = multiprocessing.Queue()
     parts = slicelist(liste=newnucs_idis, slicenum=cpunum)
     proc = {}
+    sleeptime = 4/cpunum#TODO verify this value... expermiental, empirical
     for i in range(cpunum):
         if i < len(parts):
             proc[i] = multiprocessing.Process(target=worker, args=(parts[i], CAND, OCC, q))
             proc[i].start()
     results = {}
     waited = 0
+    reduced = False
     while True:
         sleep(0.1)
         waited+=1
@@ -220,13 +220,27 @@ def dispatch_buildnuc(newnucs_idis, CAND, OCC):
         while not q.empty():
         #item in queue should be dict of dict/ key: cand_idi; value: {'where': where, 'occ_repr': occ_repr, 'shape_repr': shape_repr}
             results.update(q.get())#there should not be any duplicate...
-        sleep(1)
+        sleeptime = 10/(q.qsize()+1)
+        if sleeptime < 1:
+            sleep(sleeptime)
+        else:
+            sleep(1)
     for i in range(cpunum):
         if i < len(parts):
             proc[i].join()#waiting for each processor to finish
     rejoindata(results, CAND, OCC)
+    del results
 
-
+def buildinlang(Haruspexdir, config):
+    if config["lang"] == "fr":
+        emptywords = build_wordset(os.path.join(Haruspexdir, 'french', 'emptywords_fr.txt'))
+        stopwords = build_wordset(os.path.join(Haruspexdir, 'french', 'stopwords_fr.txt'))
+        linkwords = build_linkdict(os.path.join(Haruspexdir, 'french', 'schema'))
+    if config["lang"] == "en":
+        emptywords = build_wordset(os.path.join(Haruspexdir, 'english', 'emptywords_en.txt'))
+        stopwords = build_wordset(os.path.join(Haruspexdir, 'english', 'stopwords_en.txt'))
+        linkwords = build_linkdict(os.path.join(Haruspexdir, 'english', 'schema'))
+    return emptywords, stopwords, linkwords
 
 #jsonpagespos_path is to store the position of the markers spliting the original pages in the concatenated txt4ana.txt
 def build_OCC(Haruspexdir, working_directory, config):
@@ -234,13 +248,11 @@ def build_OCC(Haruspexdir, working_directory, config):
     logging.info('### building the OCC dict ###')
     occ2boot = {}
     propernouns = {}
+    emptywords, stopwords, linkwords = buildinlang(Haruspexdir, config)
     bootstrap = build_bootdict(os.path.join(working_directory, 'bootstrap'))
-    emptywords = build_wordset(os.path.join(Haruspexdir, 'french', 'emptywords_fr.txt'))
-    stopwords = build_wordset(os.path.join(Haruspexdir, 'french', 'stopwords_fr.txt'))#config['stopwords_file_path'])
     Rextraemptyword = build_regex(os.path.join(working_directory, "extra_emptywords.txt"))
     Rextrastopword = build_regex(os.path.join(working_directory, "extra_stopwords.txt"))
-    linkwords = build_linkdict(os.path.join(Haruspexdir, 'french', 'schema'))
-    Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')#TODO build a splitermark regex
+    Rsplitermark = re.compile(r'wxcv[\d|_]*wxcv')
     Rdate = re.compile(r'(1\d\d\d|20\d\d)')
     Rnumeral = re.compile(r'(\b\d+\b)')
     Rponctuation = re.compile(r'[,!?;]')
@@ -257,7 +269,7 @@ def build_OCC(Haruspexdir, working_directory, config):
                 index += 1
                 matchbootstrap = False
                 if Rsplitermark.match(word):
-                    if page_id:#the first markers of the page will not ask to close a previous page
+                    if page_id:#the first markers of the page will not close a previous page
                         PAGES[page_id].where += (index,)#close the previous page, the var page_id is still the previous version
                     page_id = re.findall(r'([\_|\d]+)', word)[0]#get the new page id
                     PAGES[page_id] = Page(begin=index+1, idi=page_id)#a page object, init "where" with begining of the next page
@@ -297,14 +309,17 @@ def build_OCC(Haruspexdir, working_directory, config):
         newnucs_idis.append(next_id)
     if config['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
         for propernoun in propernouns:
-            if len(propernouns[propernoun])>1:#if more than one occurrence of the propernoun has been found
+            if len(propernouns[propernoun])>=config["propernouns_threshold"]:#if more than one occurrence of the propernoun has been found
                 try:
                     next_id = max(CAND)+1
                 except ValueError:#this means it is the first cand, there is no value for max, so there is no bootstrap cand
                     print('ALERT: No word in bootstrap file...')
                     next_id = 1
                 CAND[next_id] = Nucleus(idi = next_id, where = propernouns[propernoun])
-                newnucs_idis.append(next_id)
+                if config["propernouns_based_search"]:
+                    newnucs_idis.append(next_id)
+                else:
+                    CAND[next_id].build(OCC, CAND)
     dispatch_buildnuc(newnucs_idis, CAND, OCC)
     return OCC, CAND, PAGES
 
@@ -337,15 +352,20 @@ def purge_forbidden_cand(non_solo_file_path, CAND, OCC):
                 del CAND[nuc_idi]
                 break#once nuc_idi is forbidden, no need to search how many times it could be forbidden...!
 
-def areverbs(dict_candshape):
+def areverbs(dict_candshape, config):
     try:# TreeTagger is optional...
-        tagger = treetaggerwrapper.TreeTagger(TAGLANG='fr')
+        lang = config["lang"]
+        tagger = treetaggerwrapper.TreeTagger(TAGLANG=lang)
+        verbpat = 'VER'
+        if lang == 'en':
+            verbpat = 'VV'
         for idi in dict_candshape:
             tags = tagger.tag_text(dict_candshape[idi]["max_occ_shape"])
             taglist = treetaggerwrapper.make_tags(tags)
             for tag in taglist:
-                if re.match(r'VER',tag.pos) and not tag.word[0].isupper():
+                if re.match(verbpat,tag.pos) and not tag.word[0].isupper():
                     dict_candshape[idi]["verb_based"] = True
+                    break
                 else:
                     dict_candshape[idi]["verb_based"] = False
     except:
@@ -364,7 +384,7 @@ def continuewikireq(wiki, parametres, proxies, headers, auth):
             if 'error' in result:
                 if result['error']['code'] == 'maxlag':
                     print('waiting 5sec for wikipedia server')
-                    time.sleep(5)
+                    sleep(4)
                     result['continue']= lastContinue
                 else:
                     raise Exception(result['error'])
@@ -543,35 +563,58 @@ def merge_similar_cands(dict_candshape, CAND, OCC):
                 del dict_candshape[cand_id]
                 del CAND[cand_id]
 
+def match_candpage(PAGES, CAND, OCC):
+    with open('intra/see.txt', 'w') as seefile:
+        for occ_pos in range(PAGES["15_0_0_0_0"].where[0], PAGES["15_0_0_0_0"].where[1]):
+            seefile.write( OCC[occ_pos].long_shape + ' ')
+        seefile.write('##########\n\n')
+        for cand_idi in CAND:
+            for occ_positions in CAND[cand_idi].where:#self.where is a set of tuple, -> occ_positions is a tupe
+                for page_idi in PAGES:
+                    if PAGES[page_idi].where[0] < occ_positions[0] < PAGES[page_idi].where[1]:
+                        PAGES[page_idi].what.append(cand_idi)
+                        CAND[cand_idi].whichpage.append(page_idi)
+                        if page_idi == "15_0_0_0_0":
+                            seefile.write(str(cand_idi))
+                            for occ_pos in occ_positions:
+                                seefile.write(' ')
+                                seefile.write(OCC[occ_pos].long_shape)
+                            seefile.write('\n')
+
 def write_output(CAND, OCC, PAGES, config):
     print('candidats trouvés :', len(CAND))
-    ending = clock()
+    ending = time() - config["started_at"]
     print('ana lasted: ', str(ending), ' seconds')
     logging.info('Ended at' + str(ending))
 
     purge_forbidden_cand('non_solo.txt', CAND, OCC)#check throught soft eguality if a CAND shape is in the forbidden list
     dict_candshape = cand_final_shapes(CAND, OCC)
     merge_similar_cands(dict_candshape, CAND, OCC)
-    areverbs(dict_candshape)
+    areverbs(dict_candshape, config)
     get_wikidata(dict_candshape, CAND, config)
-    inpage = {}
-    wherekey = {}
+    match_candpage(PAGES, CAND, OCC)
     alone = {}
-    for page_idi in PAGES:
-        page_end = PAGES[page_idi].where[1]
-        page_begin = PAGES[page_idi].where[0]
-        for cand_idi in CAND:
-            for where in CAND[cand_idi].where:#self.where is a set of tuple, -> where is a tupe
-                if page_begin < where[0] < page_end:
-                    inpage.setdefault(page_idi, []).append(cand_idi)
-                    wherekey.setdefault(cand_idi, []).append(page_idi)
+    # inpage = {}
+    wherekey = {}
+    # for page_idi in PAGES:
+    #     page_end = PAGES[page_idi].where[1]
+    #     page_begin = PAGES[page_idi].where[0]
+    #     for cand_idi in CAND:
+    #         for occ_positions in CAND[cand_idi].where:#self.where is a set of tuple, -> where is a tupe
+    #             if page_begin < occ_positions[0] < page_end:
+
     print('\n\n###### writting output files')
-    for cand_idi, pages_occs in wherekey.items():
-        pageset = set(pages_occs)
-        if len(pageset) == 1:
-            alone[cand_idi] = True
+    for cand_id, candid in CAND.items():
+        if len(set(candid.whichpage)) == 0:
+            print('candidat fantome', cand_idi)
+        if len(set(candid.whichpage)) == 1:
+            alone[cand_id] = True
         else:
-            alone[cand_idi] = False
+            alone[cand_id] = False
+        wherekey[cand_id] = candid.whichpage
+    inpage = {page_id: page.what for page_id, page in PAGES.items()}
+    # for page_id, page in PAGES.items():
+    #     inpage[page_id] = page.what
     with open('intra/where_keyword.json', 'w') as where_keyword:
         json.dump(wherekey, where_keyword, ensure_ascii=False, indent=4)
     with open('intra/what_inpage.json', 'w') as what_inpage:
@@ -602,5 +645,5 @@ def write_output(CAND, OCC, PAGES, config):
             dict_candshape[idi].get('portals_confidence'),
             ''
             ])
-    ending2 = clock()
+    ending2 = time() - config["started_at"] - ending
     print('writing output lasted: ', str(ending2), ' seconds')

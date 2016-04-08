@@ -11,13 +11,13 @@ import csv
 from collections import Counter
 
 
-def calculate_idf(dict_bykey, dict_bypage):
+def calculate_idf(dict_bykey, nb_pages):
     dict_idf = {}
-    nb_pages = len(dict_bypage) #how many pages there are
+    #nb_pages #how many pages there are
     for keyword in dict_bykey:
-        specifity = len(set(dict_bykey[keyword]))**2#in how many documents the key term appears
-        idf = math.log10(nb_pages/specifity)
-        dict_idf[keyword] = idf
+        specifity = 1.0-(len(set(dict_bykey[keyword]))/nb_pages)**2#in how many documents the key term appears
+        # idf = math.log10(nb_pages/len(set(dict_bykey[keyword]))
+        dict_idf[keyword] = specifity
     return dict_idf
 
 def merge_equiv(validkeys, equiv):
@@ -41,21 +41,22 @@ def getvalidkeyword(working_directory):
     return validkeysmerged, equiv
 
 def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords):
-    idf = calculate_idf(dict_bykey, dict_bypage)
+    idf = calculate_idf(dict_bykey, len(dict_bypage))
     done = set()
     with open(join(working_directory, 'toneo', 'links.csv'), 'w') as csvfile:
         linksfile = csv.writer(csvfile)
-        header = ['fichea', 'ficheb', 'keyword', 'tf_idf', 'occurrences', 'groups', 'groups_confidence']
+        header = ['fichea', 'ficheb', 'keyword', 'tf_idf', 'min_occ', 'tot_occ', 'groups', 'groups_confidence']
         linksfile.writerow(header)
-        for key in dict_bykey: #each key in a page will be a link
+        for key in valid_keywords:# in dict_bykey: #each key in a page will be a link
             nb_occurrences_of_key_inpage = Counter(dict_bykey[key]) #return smth like {'pagenumber1': 2 ; 'pagenumber5': 3 ; 'pagenumberx': y}
             for page_number in nb_occurrences_of_key_inpage:
                 for p_num in nb_occurrences_of_key_inpage:
                     linked = str(page_number + '@' + p_num)
                     deknil = str(p_num + '@' + page_number)
                     if (page_number != p_num and deknil not in done):
-                        tf = nb_occurrences_of_key_inpage[p_num] + nb_occurrences_of_key_inpage[page_number]
-                        tfidf = tf * idf[key]
+                        tf = float(nb_occurrences_of_key_inpage[p_num] + nb_occurrences_of_key_inpage[page_number])/float(valid_keywords[key]['occurrences'])
+                        weight = tf * idf[key]
+                        min_occ = min(nb_occurrences_of_key_inpage[p_num], nb_occurrences_of_key_inpage[page_number])
                         done.add(linked)
                         if valid_keywords[key]['groups']:
                             group = valid_keywords[key]['groups']
@@ -69,7 +70,7 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
                             confidence = valid_keywords[key]['groups_confidence']
                         else:
                             confidence = 'NULL'
-                        linksfile.writerow([page_number, p_num, valid_keywords[key]['shape'], tfidf, occurrences, group, confidence])
+                        linksfile.writerow([page_number, p_num, valid_keywords[key]['shape'], weight, min_occ, occurrences, group, confidence])
 
 def build_2_dicts(working_directory, valid_keywords, equiv):
     with open(join(working_directory, 'ANA', 'intra','where_keyword.json')) as where_keyword_file:
@@ -116,7 +117,7 @@ def upload_relations(working_directory):
     print('now uploading links to neo4j, this may last a little while...')
     authenticate("localhost:7474", "neo4j", "haruspex")
     graph_db = Graph()
-    graph_db.cypher.execute("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r")#delete the existing relationship (MERGE should avoid this but...)
+    graph_db.cypher.execute("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r")#delete the existing relationship (MERGE should avoid this but match is much faster...)
     graph_db.cypher.execute('CREATE CONSTRAINT ON (a:fiche) ASSERT a.doc_position IS UNIQUE')
     loadquery = '''
 USING PERIODIC COMMIT 500
@@ -124,7 +125,7 @@ LOAD CSV WITH HEADERS
 FROM "csvfile" AS csvLine
 MATCH (node1:fiche { doc_position: csvLine.fichea })
 MATCH (node2:fiche { doc_position: csvLine.ficheb })
-MERGE (node1)-[r:keyword { name: csvLine.keyword , wikiname: coalesce(csvLine.wikipedia_shape, "") , occurrences : toInt(csvLine.occurrences), weight: toInt(csvLine.tf_idf) , groups: csvLine.groups, groups_confidence: coalesce(toInt(csvLine.groups_confidence), "")}]->(node2)
+CREATE (node1)-[r:keyword { name: csvLine.keyword , wikiname: coalesce(csvLine.wikipedia_shape, "") , occurrences : toInt(csvLine.tot_occ), weight: toFloat(csvLine.tf_idf), min_occ: ToInt(csvLine.min_occ), groups: csvLine.groups, groups_confidence: coalesce(toInt(csvLine.groups_confidence), "")}]->(node2)
 '''.replace('csvfile',csvfile)
     graph_db.cypher.execute(loadquery)
 

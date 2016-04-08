@@ -14,6 +14,7 @@ with open('workingdirectory', 'r') as dirfile:
     chdir(working_directory)
 # config = json.loads(open(os.path.join(sys.argv[1],'ana_config.json')).read())
 config = json.loads(open(join(working_directory, 'ana_config.json')).read())
+config["started_at"]= time.time()
 ANA_useful.setupfolder()# mkir  the useful sub-forlders
 global_steps = int(config['global_steps'])
 OCC, CAND, PAGES = ANA_useful.build_OCC(Haruspexdir, working_directory, config)
@@ -42,9 +43,9 @@ while not stop:
     #stop conditions:
     if config['automaticsteps'] and diff == 0:
         config['automaticsteps'] = False #out ouf this loop next time, for x more rounds
-        if time.clock() < 15:#if it is a short process (less than xx sec)
+        if time.time() - t0 < 15:#if it is a short process (less than xx sec)
             global_steps = 2#run 2 more times after having stoped discoverring cands. (-> building long xpre and xpa?)
-        elif time.clock() < 200:
+        elif time.time() - t0 < 200:
             global_steps = 1# run one more time after having stoped discoverring cands.
         else:
             stop = True

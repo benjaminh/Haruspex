@@ -126,6 +126,7 @@ class Candidat:
     def __init__(self, idi = 0, where = set()):
         self.id = idi
         self.where = where #set of tuple of occurrences positions. ex: ((15,16,17), (119,120,121), (185,186,187)) for long cands like expression
+        self.whichpage = []
         logging.info('Cand '+ str(self.id) + ' created there: ' + str(self.where))
         # self.long_shape = long_shape # Normalized shape
 
@@ -351,4 +352,4 @@ class Page:
         self.idi = idi
         self.where = (begin,)#tuple containaing the first and last occ indice of the page
         self.node = None
-        self.what_inpage = []
+        self.what = []

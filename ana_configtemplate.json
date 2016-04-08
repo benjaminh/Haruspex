@@ -14,6 +14,7 @@
         ],
     "automaticsteps": false,
     "propernouns": true,
+    "propernouns_threshold": 3,
     "propernouns_based_search": true,
     "request_wikipedia": true,
     "try_desambiguation": true,
