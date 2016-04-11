@@ -26,5 +26,6 @@
     "consumer_key": "",
     "consumer_secret": "",
     "access_token": "",
-    "access_secret": ""
+    "access_secret": "",
+    "survey_csvfilepath": ""
 }

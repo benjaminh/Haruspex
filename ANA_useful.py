@@ -8,8 +8,8 @@ import json
 from csv import writer
 import copy
 import requests
-from time import sleep, localtime, time
-from requests_oauthlib import OAuth1
+from time import sleep, time, gmtime, strftime
+#from requests_oauthlib import OAuth1
 import multiprocessing
 try:
     import treetaggerwrapper#to create a catégory 'is a verb' in output
@@ -155,7 +155,7 @@ def str_simplify(string):
 def start_log(working_directory):
     logfilepath = os.path.join(working_directory, 'log', 'ana.log')
     logging.basicConfig(filename=logfilepath, format='%(levelname)s:%(message)s', level=logging.INFO)
-    logging.info('Started at' + str(localtime()))
+    logging.info('Started at' + str(strftime("%a, %d %b %Y %H:%M:%S", gmtime())))
 
 def slicelist(liste, slicelen=False, slicenum=False):
     #slicing the list in sublists
@@ -368,10 +368,12 @@ def areverbs(dict_candshape, config):
                     break
                 else:
                     dict_candshape[idi]["verb_based"] = False
+        return True
     except:
         print("\nALERT Error during the tagging of VERBS; did you install treeTagger?")
         for idi in dict_candshape:
             dict_candshape[idi]["verb_based"] = 'no TreeTagger'
+        return False
 
 def continuewikireq(wiki, parametres, proxies, headers, auth):
     lastContinue = {'continue': ''}
@@ -539,7 +541,7 @@ def get_wikidata(dict_candshape, CAND, config):
 
         print('\nSearching on wikipedia for categories, portails, normalized shapes...')
         proxies = config['proxies']
-        auth = OAuth1(config['consumer_token'], config['consumer_secret'], config['access_token'], config['access_secret'])
+        auth = 'a'#OAuth1(config['consumer_token'], config['consumer_secret'], config['access_token'], config['access_secret'])
         headers = {'Api-User-Agent':'Haruspex/0.2 (https://github.com/benjaminh/Haruspex/tree/Haruspex2; matthieu.quantin@ec-nantes.fr)'}
         lang = config['lang']
         dict_candshape, to_decidelater, visitedportals, cand_idi_bywikishape = first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, auth)
@@ -581,6 +583,34 @@ def match_candpage(PAGES, CAND, OCC):
                                 seefile.write(OCC[occ_pos].long_shape)
                             seefile.write('\n')
 
+def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
+#row: version date	CPUnum	txtlenght(Mo)	Prop.noun search	Treetagger	Final cand nb	tot. word cand nb	lasted step	nesteedstep	threshold	corpus name	lang
+    row = []
+    row.append(str(strftime("%d/%m/%Y", gmtime())))#date
+    row.append(len(os.sched_getaffinity(0)))#cpunum
+    row.append(os.path.getsize("txt4ana"))#txt4ana lengh
+    row.append(config["propernouns_based_search"])
+    row.append(isTreetaggerInstalled)#is treetagger installed?
+    row.append(len(CAND))
+    # allwords = [word for word in dict_candshape[idi]["max_occ_shape"].split() for idi in dict_candshape]
+    allwords = [word for idi in dict_candshape for word in dict_candshape[idi]["max_occ_shape"].split()]
+    # [item for sublist in l for item in sublist]
+    row.append(len(allwords))
+    row.append(ending)
+    row.append(config["global_steps"])
+    row.append(config["nucleus_nestedsteps"])
+    row.append(config["recession_threshold"])
+    row.append(config["nucleus_threshold"])
+    corpus_name = re.sub(r'/ANA/?$', '', os.getcwd())
+    corpus_name = re.sub(r'^.*/', '', corpus_name)
+    row.append(corpus_name)#get the currend workingdirectory, get the corpus folder name
+    row.append(config["lang"])
+    with open(config["survey_csvfilepath"], 'a') as csvfile:
+        surveyfile = writer(csvfile)
+        surveyfile.writerow(row)
+
+
+
 def write_output(CAND, OCC, PAGES, config):
     print('candidats trouvés :', len(CAND))
     ending = time() - config["started_at"]
@@ -590,23 +620,15 @@ def write_output(CAND, OCC, PAGES, config):
     purge_forbidden_cand('non_solo.txt', CAND, OCC)#check throught soft eguality if a CAND shape is in the forbidden list
     dict_candshape = cand_final_shapes(CAND, OCC)
     merge_similar_cands(dict_candshape, CAND, OCC)
-    areverbs(dict_candshape, config)
+    isTreetaggerInstalled = areverbs(dict_candshape, config)
     get_wikidata(dict_candshape, CAND, config)
     match_candpage(PAGES, CAND, OCC)
+    if os.path.isfile(config["survey_csvfilepath"]):
+        writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled)
     alone = {}
-    # inpage = {}
     wherekey = {}
-    # for page_idi in PAGES:
-    #     page_end = PAGES[page_idi].where[1]
-    #     page_begin = PAGES[page_idi].where[0]
-    #     for cand_idi in CAND:
-    #         for occ_positions in CAND[cand_idi].where:#self.where is a set of tuple, -> where is a tupe
-    #             if page_begin < occ_positions[0] < page_end:
-
     print('\n\n###### writting output files')
     for cand_id, candid in CAND.items():
-        if len(set(candid.whichpage)) == 0:
-            print('candidat fantome', cand_idi)
         if len(set(candid.whichpage)) == 1:
             alone[cand_id] = True
         else:
