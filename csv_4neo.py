@@ -74,17 +74,21 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
         linksfile = csv.writer(csvfile)
         header = ['fichea', 'ficheb', 'keyword', 'tf_idf', 'min_occ', 'tot_occ', 'groups', 'groups_confidence']
         linksfile.writerow(header)
+        lines = []
+        maxweight = 0
         for key in valid_keywords:# in dict_bykey: #each key in a page will be a link
             nb_occurrences_of_key_inpage = Counter(dict_bykey[key]) #return smth like {'pagenumber1': 2 ; 'pagenumber5': 3 ; 'pagenumberx': y}
             for page_number in nb_occurrences_of_key_inpage:
-                for p_num in nb_occurrences_of_key_inpage:
+                for p_num in nb_occurrences_of_key_inpage:#open it a second time to build links based on this key
                     linked = str(page_number + '@' + p_num)
                     deknil = str(p_num + '@' + page_number)
                     if (page_number != p_num and deknil not in done):
-                        tf = float(nb_occurrences_of_key_inpage[p_num] + nb_occurrences_of_key_inpage[page_number])/float(valid_keywords[key]['occurrences'])
-                        weight = tf * idf[key]
-                        min_occ = min(nb_occurrences_of_key_inpage[p_num], nb_occurrences_of_key_inpage[page_number])
                         done.add(linked)
+                        min_occ = min(nb_occurrences_of_key_inpage[p_num], nb_occurrences_of_key_inpage[page_number])
+                        tf = float(math.log10(nb_occurrences_of_key_inpage[p_num] + nb_occurrences_of_key_inpage[page_number]) * min_occ*min_occ)
+                        weight = tf * idf[key]
+                        if weight > maxweight:
+                            maxweight = weight
                         if valid_keywords[key]['groups']:
                             group = valid_keywords[key]['groups']
                         else:
@@ -97,7 +101,10 @@ def build_links_TFiDF(working_directory, dict_bykey, dict_bypage, valid_keywords
                             confidence = valid_keywords[key]['groups_confidence']
                         else:
                             confidence = 'NULL'
-                        linksfile.writerow([page_number, p_num, valid_keywords[key]['shape'], weight, min_occ, occurrences, group, confidence])
+                        lines.append([page_number, p_num, valid_keywords[key]['shape'], weight, min_occ, occurrences, group, confidence])
+        for line in lines:
+            line[3] = math.log10(line[3])/math.log10(maxweight)#scale the weight in [0,1]
+            linksfile.writerow(line)
 
 def build_keywords_links(working_directory, dict_bykey, dict_bypage, valid_keywords):
     '''
