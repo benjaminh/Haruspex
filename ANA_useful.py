@@ -9,7 +9,6 @@ from csv import writer
 import copy
 import requests
 from time import sleep, time, gmtime, strftime
-#from requests_oauthlib import OAuth1
 import multiprocessing
 try:
     import treetaggerwrapper#to create a catégory 'is a verb' in output
@@ -375,14 +374,14 @@ def areverbs(dict_candshape, config):
             dict_candshape[idi]["verb_based"] = 'no TreeTagger'
         return False
 
-def continuewikireq(wiki, parametres, proxies, headers, auth):
+def continuewikireq(wiki, parametres, proxies, headers):
     lastContinue = {'continue': ''}
     results = {}
     while True:
             # Modify it with the values returned in the 'continue' section of the last result.
             parametres.update(lastContinue)
             # Call API
-            result = requests.get(wiki, params= parametres, proxies=proxies, headers=headers, auth=auth).json()
+            result = requests.get(wiki, params= parametres, proxies=proxies, headers=headers).json()
             if 'error' in result:
                 if result['error']['code'] == 'maxlag':
                     print('waiting 5sec for wikipedia server')
@@ -402,7 +401,7 @@ def continuewikireq(wiki, parametres, proxies, headers, auth):
                 results['pages'] = []
     return results
 
-def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest, auth):
+def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest):
     '''
     check if a page in desambiguation categorie can be desambiguate,
     based on the mainly used portals, if the page belongs to them, we choose them!
@@ -423,7 +422,7 @@ def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visi
     for sli in sliced_keys:
         if sli:
             request2['titles'] = '|'.join(sli)
-            dict_rep2 = continuewikireq(wiki, request2, proxies, headers, auth)
+            dict_rep2 = continuewikireq(wiki, request2, proxies, headers)
             try:
                 for page in dict_rep2['pages']:
                     idi = cand_idi_bywikishape[page['title']]#cand_idi corresponding to the pages
@@ -433,7 +432,7 @@ def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visi
                         goodlinks = [link['title'] for link in page['links'] if re.findall(page['title']+'(?siu)', link['title'])][:20]#contain page title
                     #if there is more than xx goodlinks then it's a very common name, not useful
                     request3['titles'] = '|'.join(goodlinks)
-                    dict_rep3 = continuewikireq(wiki, request3, proxies, headers, auth)
+                    dict_rep3 = continuewikireq(wiki, request3, proxies, headers)
                     max_confidence = 0
                     try:
                         for page in dict_rep3['pages']:
@@ -466,7 +465,7 @@ def second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visi
             pass
     return dict_candshape
 
-def first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, auth):
+def first_wiki_query(dict_candshape, proxies, lang, headers, baserequest):
     '''
     return
     dict_candshape with wikishape: normalized page title by wiki request redirection: cleantitle (str)
@@ -501,7 +500,7 @@ def first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, auth):
         request1['cllimit'] = '500'
         request1['plnamespace'] = '100'
         request1['pllimit'] = '500'
-        dict_rep = continuewikireq(wiki, request1, proxies, headers, auth)
+        dict_rep = continuewikireq(wiki, request1, proxies, headers)
         #keeping the cand_idi in relation with the mutation of the wikipage
         if 'normalized' in dict_rep:
             for item in dict_rep['normalized']:
@@ -541,14 +540,13 @@ def get_wikidata(dict_candshape, CAND, config):
 
         print('\nSearching on wikipedia for categories, portails, normalized shapes...')
         proxies = config['proxies']
-        auth = 'a'#OAuth1(config['consumer_token'], config['consumer_secret'], config['access_token'], config['access_secret'])
         headers = {'Api-User-Agent':'Haruspex/0.2 (https://github.com/benjaminh/Haruspex/tree/Haruspex2; matthieu.quantin@ec-nantes.fr)'}
         lang = config['lang']
-        dict_candshape, to_decidelater, visitedportals, cand_idi_bywikishape = first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, auth)
+        dict_candshape, to_decidelater, visitedportals, cand_idi_bywikishape = first_wiki_query(dict_candshape, proxies, lang, headers, baserequest)
 
         if config['try_desambiguation']:
             print('\ntrying_desambiguation on wikipedia for', len(to_decidelater), 'keywords')
-            dict_candshape = second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest, auth)
+            dict_candshape = second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest)
 
 
 #TODO improve this function that only works on the final shape of the cand and does the job a minima...
@@ -566,22 +564,13 @@ def merge_similar_cands(dict_candshape, CAND, OCC):
                 del CAND[cand_id]
 
 def match_candpage(PAGES, CAND, OCC):
-    with open('intra/see.txt', 'w') as seefile:
-        for occ_pos in range(PAGES["15_0_0_0_0"].where[0], PAGES["15_0_0_0_0"].where[1]):
-            seefile.write( OCC[occ_pos].long_shape + ' ')
-        seefile.write('##########\n\n')
         for cand_idi in CAND:
             for occ_positions in CAND[cand_idi].where:#self.where is a set of tuple, -> occ_positions is a tupe
                 for page_idi in PAGES:
                     if PAGES[page_idi].where[0] < occ_positions[0] < PAGES[page_idi].where[1]:
                         PAGES[page_idi].what.append(cand_idi)
                         CAND[cand_idi].whichpage.append(page_idi)
-                        if page_idi == "15_0_0_0_0":
-                            seefile.write(str(cand_idi))
-                            for occ_pos in occ_positions:
-                                seefile.write(' ')
-                                seefile.write(OCC[occ_pos].long_shape)
-                            seefile.write('\n')
+
 
 def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
 #row: version date	CPUnum	txtlenght(Mo)	Prop.noun search	Treetagger	Final cand nb	tot. word cand nb	lasted step	nesteedstep	threshold	corpus name	lang
@@ -596,7 +585,7 @@ def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
     allwords = [word for idi in dict_candshape for word in dict_candshape[idi]["max_occ_shape"].split()]
     # [item for sublist in l for item in sublist]
     row.append(len(allwords))
-    row.append(ending)
+    row.append(int(ending))
     row.append(config["global_steps"])
     row.append(config["nucleus_nestedsteps"])
     row.append(config["recession_threshold"])
@@ -625,6 +614,8 @@ def write_output(CAND, OCC, PAGES, config):
     match_candpage(PAGES, CAND, OCC)
     if os.path.isfile(config["survey_csvfilepath"]):
         writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled)
+    else:
+        print("ALERT: no survey file path mentionned, don't you want to add one?")
     alone = {}
     wherekey = {}
     print('\n\n###### writting output files')

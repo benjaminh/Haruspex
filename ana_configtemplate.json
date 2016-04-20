@@ -23,9 +23,5 @@
       "https": ""
   },
     "short_expre_before": true,
-    "consumer_key": "",
-    "consumer_secret": "",
-    "access_token": "",
-    "access_secret": "",
     "survey_csvfilepath": ""
 }
