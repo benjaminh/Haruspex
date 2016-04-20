@@ -37,6 +37,8 @@ def setup_dir():
         makedirs('ANA/intra/')#mapping, pages_pos,
     if not exists('toneo'):
         makedirs('toneo')#mapping, pages_pos,
+    if not isfile(join('toneo','neo4j_config.json')):
+        copyfile(join(harupexdir, 'neo4j_configtemplate.json'), join('toneo','neo4j_config.json'))
 #TODO move_file in a subfolder, the L2P process should be adapted to
 
 
