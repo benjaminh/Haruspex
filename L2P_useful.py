@@ -55,7 +55,7 @@ def concatenate2(other_files, output):#concatenate the "other files" (non tex, n
     concat_filepath = join(output, 'concat.tex')
     with open(concat_filepath, 'a') as concat_file:
         for txtfile_name in other_files:
-            concat_file.write('\\filename{' + txtfile_name + '}\n')#a new latex-like marker for the page process
+            concat_file.write('\n\\filename{' + txtfile_name + '}\n')#a new latex-like marker for the page process
             with open(txtfile_name) as infile:
                 for line in infile:
                     line = re.sub(r'ʽ|՚|‘|‛|‵|ʾ|\'|ʿ|ʼ|΄|´|´|′|Ꞌ|ꞌ|ʹ|ˈ|‘|’|ʽ|ʼ|’', '\'', line)#this is done for the tex and odt files, but we need to purge the diacritics averywhere!
