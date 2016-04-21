@@ -173,7 +173,38 @@ def main(working_directory, doc_based_graph):
         build_keywords_links(working_directory, dict_bykey, dict_bypage, valid_keywords)
     print('Linksfile has been written')
 
-def upload_relations(working_directory, doc_based_graph):
+
+def nodes_to_update(workingdirectory):
+    with open(join(working_directory, 'pages', 'output', 'nodes.csv'), 'r') as csvfile:
+        supervisednodes = csv.reader(csvfile)
+        header = next(supervisednodes)
+        to_up = {}
+        for supervnode in supervisednodes:
+            to_up[supervnode[1]] = {'title': supervnode[2]}
+            for i, new_att_value in enumerate(supervnode[3:]):#for each new column defined by user
+                if header[i+3]:#if the new column has a header title
+                    new_att_name = header[i+3]
+                else:
+                    new_att_name = 'att'+str(i)
+                to_up[supervnode[1]].update({new_att_name: new_att_value})
+    return to_up
+
+def update_nodes(workingdirectory, graph):
+    to_up = nodes_to_update(workingdirectory)
+    for node_doc_position, new_atts in to_up.items():
+        # query = "MATCH (n1:fiche { doc_position: {0}})".format(node_doc_position)
+        n = graph.find_one("fiche", property_key = 'doc_position', property_value = node_doc_position)
+        # n.update(new_atts)
+        # print(n)
+        for new_att_name, new_att_value in new_atts.items():
+            n[new_att_name] = new_att_value
+            n.push()
+        # print(n)
+            # query += "SET n1.{0} = {1}".format(new_att_name, new_att_value)
+
+
+
+def update_upload(working_directory, doc_based_graph):
     http.socket_timeout = 9999
     # Fichea = graph.find_one('Fiche', property_key='doc_position', property_value=page_ida)
     # Fiche = graph.find_one('Fiche', property_key='doc_position', property_value=page_ida)
@@ -182,6 +213,7 @@ def upload_relations(working_directory, doc_based_graph):
     authenticate("localhost:7474", "neo4j", "haruspex")
     graph_db = Graph()
     graph_db.cypher.execute("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r")#delete the existing relationship (MERGE should avoid this but match is much faster...)
+    update_nodes(working_directory, graph_db)
 
     if doc_based_graph == True:
         # Create the graph based on documents
@@ -228,4 +260,4 @@ config = json.loads(open(join(working_directory, 'toneo', 'neo4j_config.json')).
 doc_based_graph = config['doc_based']
 
 main(working_directory, doc_based_graph)
-upload_relations(working_directory, doc_based_graph)
+update_upload(working_directory, doc_based_graph)

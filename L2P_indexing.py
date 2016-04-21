@@ -6,6 +6,7 @@ import re
 import json
 from L2P_Objects import Fiche, Reference, Picture, Counter
 from py2neo import Graph, Node, Relationship, authenticate
+import csv
 
 Rfootnote = re.compile(r'(\\footnote[^}]*})', re.UNICODE) #récupere l'ensemble (la footnote) pour le supprimer
 
@@ -33,6 +34,7 @@ def write_jsons(working_directory, fichesdict, fichesordered):
 
 def create_nodes_and_rels(fichesdict, pictdict, refdict, graph_db):
     '''
+    complemented by the the create_csv_files fonction: give attribute to the nodes
     this function creates nodes
     when creating a node,
     the Object (Picture, Reference, Fiche) get an node_id attribute
@@ -43,12 +45,20 @@ def create_nodes_and_rels(fichesdict, pictdict, refdict, graph_db):
     for refnum in refdict:#Build the node for each reference
         refdict[refnum].create_node(graph_db)
     for fichenum in fichesdict:#Build the node for each page
-        #print('CREATING NODE', fichenum)
         fichesdict[fichenum].create_node(graph_db)
-        #print('CREATING RELATIONS', fichenum)
         fichesdict[fichenum].create_relations(graph_db, pictdict, refdict)
 
-
+def create_csv_output(working_directory, fichesdict):
+    '''
+    this function create a csv row for each valid document (>min size)
+    and a csv row for each pict and reference
+    '''
+    with open(join(working_directory, 'pages', 'output', 'nodes.csv'), 'w', encoding = 'utf-8') as outfile:
+        output = csv.writer(outfile)
+        header = ['file', 'doc_position', 'title', 'date']
+        output.writerow(header)
+        for fichenum in fichesdict:#Build the node for each page
+            fichesdict[fichenum].write_row(output)
 
 def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, parag_cut ,auteur, date):
     #getting the last cleaned file
@@ -115,5 +125,6 @@ def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, para
     except:
         print('No neo4j database found on localhost:7474, try to (re)start it')
     print('\n\n###\nnow writting output files\n###')
+    create_csv_output(working_directory, fichesdict)
     write_jsons(working_directory, fichesdict, fichesordered)
     print('NOMBRE DE FICHES', len(fichesdict))

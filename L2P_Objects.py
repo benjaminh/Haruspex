@@ -45,11 +45,14 @@ class Picture:
             self.caption = None
 
     def create_node(self,graph_db):
-        # Ajouter propriétés du type "modified" ?
         pict_properties = {'file': self.file, 'caption': self.caption, }
         self._node = Node.cast(pict_properties)
         self._node.labels.add('picture')
         graph_db.create(self._node)
+
+    def write_row(self, output):
+        pict_properties = ['pict', self.where, self.file, self.caption]
+        output.writerow(pict_properties)
 
 
 
@@ -110,6 +113,10 @@ class Reference:
         self._node = Node.cast(ref_properties)
         self._node.labels.add('ref')
         graph_db.create(self._node)
+
+    def write_row(self, output):
+        ref_properties = ['ref', self.where, self.content]
+        output.writerow(ref_properties)
 
 
 class Counter:
@@ -265,3 +272,12 @@ class Fiche:
             pict_node = pictdict[pict]._node
             relatio = Relationship.cast(pict_node, ("pict"), self._node)
             graph_db.create(relatio)
+
+    def write_row(self, output):
+        dates = re.findall(r'[1|2]\d\d\d', self.title)
+        if dates:
+            date = dates[0]
+        else:
+            date = ''
+        fiche_properties = [self.file_num, self.number, self.title, date]
+        output.writerow(fiche_properties)
