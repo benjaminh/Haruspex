@@ -1,0 +1,15 @@
+---
+graph:
+    doc_based: true # titre
+    user_name: neo4j
+    password: haruspex
+keylinks:
+    term_weightening_mode: cos # cos (soft = 30; hard =500) or log (soft = 1; hard =3). Cos is more stable on the extremums; log is harder (sharper?)
+    term_weightening_factor: medium #'soft', 'med', 'hard' or any integer// the harder highly discriminates the generic keywords
+    document_closeness_factor: medium #'verysoft', 'soft', 'med', 'hard', very 'hard'// the harder highly discriminate the weakly connected documents
+    ponderation_threshold: 0.05 #avoid having millions of super weak keylinks,
+    ponderation_mode: null #null or log (for logaritmic redistribution)
+uniquelinks:
+    ponderation: sum # sum or ???; sum is the sum of all the keylinks ponderations between 2 docs
+    ponderation_mode: null # null or log (for logaritmic redistribution)
+...
