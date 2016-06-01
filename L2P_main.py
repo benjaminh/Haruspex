@@ -6,9 +6,9 @@ from os.path import join
 import re
 from L2P_indexing import writePages_and_txt4ana
 from L2P_CleanLaTeX import cleanLatex
-import json
+import yaml
 from L2P_useful import setup_dir, convert_concat, concat_others
-#config = json.loads(open(os.path.join(sys.argv[1],'L2P_config.json')).read())
+#config = yaml.loads(open(os.path.join(sys.argv[1],'L2P_config.yaml')).read())
 # pour faire tourner en ligne de commande
 with open('workingdirectory', 'r') as dirfile:
     working_directory = dirfile.readline().rstrip()
@@ -16,7 +16,7 @@ chdir(working_directory)
 setup_dir()
 
 
-config = json.loads(open(join(working_directory, 'pages', 'L2P_config.json')).read())
+config = yaml.load(open(join(working_directory, 'pages', 'L2P_config.yaml')).read())
 writer2LaTeX_path = config['writer2LaTeX_path']
 
 auteur = config['author']

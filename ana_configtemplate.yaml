@@ -1,0 +1,30 @@
+---
+lang: fr
+soft_equality_threshold: 7
+survey_csvfilepath: #a csv file to record the performance of Haruspex and its configuration
+steps:
+    global_steps: 3
+    nucleus_nestedsteps: 3
+    automaticsteps: false
+extract:
+    recession_threshold: 3
+    expression_threshold: 3
+    expansion_threshold: 3
+    nucleus_threshold:
+        - 1 # same linkword same CAND
+        - 2 # s2: same linkword, different CAND
+        - 2 # different linkword, same CAND
+        - 2 # different linkword, different CAND
+    propernouns: true #search propernouns at the begining?
+    propernouns_based_search: true #search all noun similar to the propernouns? this avoid building an other root cand for not initialy found propernouns
+    propernouns_threshold: 3 #how many propernouns to be considered as CAND?
+    short_expre_before: true #favour the short expression before the long one (if intersection exists)
+request:
+    request_wikipedia: true
+    first_request_density: 30 #number of pages in the same query. Low number implies better quality results but slower process
+    try_desambiguation: true #try to reach a correct page if page found if a desambiguation page
+    second_request_density: 2 #for desambiguation queries (slow porcess, has to parse all the portals of all the pages in desambiguation)
+    proxies:
+        http:
+        https:
+...

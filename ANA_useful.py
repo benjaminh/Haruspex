@@ -303,7 +303,7 @@ def build_OCC(Haruspexdir, working_directory, config):
             next_id = 1
         CAND[next_id] = Nucleus(idi = next_id, where = occ2boot[indice])
         newnucs_idis.append(next_id)
-    if config['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
+    if config['extract']['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
         for propernoun in propernouns:
             if len(propernouns[propernoun])>=config["propernouns_threshold"]:#if more than one occurrence of the propernoun has been found
                 try:
@@ -312,7 +312,7 @@ def build_OCC(Haruspexdir, working_directory, config):
                     print('ALERT: No word in bootstrap file...')
                     next_id = 1
                 CAND[next_id] = Nucleus(idi = next_id, where = propernouns[propernoun])
-                if config["propernouns_based_search"]:
+                if config['extract']["propernouns_based_search"]:
                     newnucs_idis.append(next_id)
                 else:
                     CAND[next_id].build(OCC, CAND)

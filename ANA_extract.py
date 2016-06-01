@@ -19,14 +19,14 @@ def nucleus_step(OCC, CAND, config):
     twordsmerged = ANA_useful.merge_egal_sple_dict(OCC,twords_dict)
     #twordsmerged {key: tuple of (twords_position); value: list of tuples(link_word_type, cand_id)}
     for case in twordsmerged:
-        if len(twordsmerged[case]) > min(config['nucleus_threshold']):
+        if len(twordsmerged[case]) > min(config['extract']['nucleus_threshold']):
             vector = ANA_useful.count_nuc_cases(twordsmerged[case])
                 #vector is tuple like this
                 # s1: same linkword same CAND
                 # s2: same linkword, different CAND
                 # s3: different linkword, same CAND
                 # s4: different linkword, different CAND
-            if any([True for x in range(4) if vector[x] >= config['nucleus_threshold'][x]]):
+            if any([True for x in range(4) if vector[x] >= config['extract']['nucleus_threshold'][x]]):
                 next_id = max(CAND) + 1
                 positions = set([tuple([position]) for position in case]) #we want a set of tuple of position presented like this set([(1,), (3,), (6,)])
                 CAND[next_id] = Nucleus(idi = next_id, where = positions)#new CAND is created
@@ -45,8 +45,8 @@ def exp_step(OCC, CAND, config):
     forbid = set()#set of occ positions allready "seen"
     exprewin = {}
     valid_exprewin = {}
-    expression_threshold = int(config['expression_threshold'])
-    expansion_threshold = int(config['expansion_threshold'])
+    expression_threshold = int(config['extract']['expression_threshold'])
+    expansion_threshold = int(config['extract']['expansion_threshold'])
     for cand_id in CAND:
         expawin = CAND[cand_id].expa_window(OCC)# {t_word_pos: tuple_cand_positions)
         expre_where, expre_what = CAND[cand_id].expre_window(OCC)
@@ -79,7 +79,11 @@ def exp_step(OCC, CAND, config):
                             #expre_what[couple] is a set of tuple(occ_pos of the entire expre) -> spread over 2 cands and the inbetween -> contain the future cand.where
             #third : building the new expre, starting with the less occurring ones.
             # Managing conflicts for cases like A de B de C -> A de B and B de C exist; we have to choose!
-    for couple in sorted(exprewin, key=lambda couple: len(exprewin[couple])):
+    if config['extract']['short_expre_before']:
+        sortedexp = sorted(exprewin, key=lambda couple: len(exprewin[couple]))
+    else:
+        sortedexp = sorted(exprewin, key=lambda couple: len(exprewin[couple]), reverse=True)
+    for couple in sortedexp:
         if len(exprewin[couple]) >= expression_threshold:
             for expre_area in exprewin[couple]:
                 if not forbid & set(expre_area):
@@ -97,7 +101,7 @@ def exp_step(OCC, CAND, config):
 ##########################
 
 def recession_step(OCC, CAND, config):
-    recession_threshold = int(config['recession_threshold'])
+    recession_threshold = int(config['extract']['recession_threshold'])
     todel = set()
     for idi in CAND:
         if CAND[idi].recession(recession_threshold, OCC, CAND):

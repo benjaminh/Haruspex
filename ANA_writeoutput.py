@@ -223,7 +223,7 @@ def first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, densit
 
 
 def get_wikidata(dict_candshape, CAND, config):
-    if config['request_wikipedia']:
+    if config['request']['request_wikipedia']:
         baserequest = {}
         baserequest['action'] = 'query'
         baserequest['format'] = 'json'
@@ -231,16 +231,16 @@ def get_wikidata(dict_candshape, CAND, config):
         baserequest['redirects'] = '1'
         baserequest['utf8'] = '1'
         baserequest['formatversion'] = 'latest'
-        density1 = config["first_request_density"]
-        density2 = config["second_request_density"]
+        density1 = config['request']["first_request_density"]
+        density2 = config['request']["second_request_density"]
 
         print('\nSearching on wikipedia for categories, portails, normalized shapes...')
-        proxies = config['proxies']
+        proxies = config['request']['proxies']
         headers = {'Api-User-Agent':'Haruspex/0.2 (https://github.com/benjaminh/Haruspex/tree/Haruspex2; matthieu.quantin@ec-nantes.fr)'}
         lang = config['lang']
         dict_candshape, to_decidelater, visitedportals, cand_idi_bywikishape = first_wiki_query(dict_candshape, proxies, lang, headers, baserequest, density1)
 
-        if config['try_desambiguation']:
+        if config['request']['try_desambiguation']:
             print('\ntrying_desambiguation on wikipedia for', len(to_decidelater), 'keywords')
             dict_candshape = second_wiki_query(cand_idi_bywikishape, dict_candshape, to_decidelater, visitedportals, proxies, lang, headers, baserequest, density2)
 
@@ -275,7 +275,7 @@ def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
     row.append(str(strftime("%d/%m/%Y", gmtime())))#date
     row.append(len(os.sched_getaffinity(0)))#cpunum
     row.append(os.path.getsize("txt4ana"))#txt4ana lengh
-    row.append(config["propernouns_based_search"])
+    row.append(config['extract']["propernouns_based_search"])
     row.append(isTreetaggerInstalled)#is treetagger installed?
     row.append(len(CAND))
     # allwords = [word for word in dict_candshape[idi]["max_occ_shape"].split() for idi in dict_candshape]
@@ -283,10 +283,10 @@ def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
     # [item for sublist in l for item in sublist]
     row.append(len(allwords))
     row.append(int(ending))
-    row.append(config["global_steps"])
-    row.append(config["nucleus_nestedsteps"])
-    row.append(config["recession_threshold"])
-    row.append(config["nucleus_threshold"])
+    row.append(config['steps']["global_steps"])
+    row.append(config['steps']["nucleus_nestedsteps"])
+    row.append(config['steps']["recession_threshold"])
+    row.append(config['steps']["nucleus_threshold"])
     corpus_name = re.sub(r'/ANA/?$', '', os.getcwd())
     corpus_name = re.sub(r'^.*/', '', corpus_name)
     row.append(corpus_name)#get the currend workingdirectory, get the corpus folder name

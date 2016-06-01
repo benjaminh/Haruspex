@@ -14,8 +14,8 @@ def setup_dir():
     	makedirs(join('pages','BeingClean'))
     if not exists(join('pages','output')):
     	makedirs(join('pages','output'))
-    if not isfile(join('pages','L2P_config.json')):
-        copyfile(join(harupexdir, 'L2P_configtemplate.json'), join('pages','L2P_config.json'))
+    if not isfile(join('pages','L2P_config.yaml')):
+        copyfile(join(harupexdir, 'L2P_configtemplate.yaml'), join('pages','L2P_config.yaml'))
     if not exists('ANA/output/'):
         makedirs('ANA/output/')#keywords, what_in_page, where_keyword...
     if not exists('ANA/log/'):
@@ -31,14 +31,14 @@ def setup_dir():
             emptyregex.write('^\w.?$')
     if not isfile('ANA/extra_stopwords.txt'):
         open('ANA/extra_stopwords.txt', 'a').close()
-    if not isfile('ANA/ana_config.json'):
-        copyfile(join(harupexdir, 'ana_configtemplate.json'), 'ANA/ana_config.json')
+    if not isfile('ANA/ana_config.yaml'):
+        copyfile(join(harupexdir, 'ana_configtemplate.yaml'), join('ANA', 'ana_config.yaml'))
     if not exists('ANA/intra/'):
         makedirs('ANA/intra/')#mapping, pages_pos,
-    if not exists('toneo'):
-        makedirs('toneo')#mapping, pages_pos,
-    if not isfile(join('toneo','neo4j_config.json')):
-        copyfile(join(harupexdir, 'neo4j_configtemplate.json'), join('toneo','neo4j_config.json'))
+    if not exists('linking'):
+        makedirs('linking')#mapping, pages_pos,
+    if not isfile(join('linking','linking_config.yaml')):
+        copyfile(join(harupexdir, 'linking_configtemplate.yaml'), join('linking','linking_config.yaml'))
 #TODO move_file in a subfolder, the L2P process should be adapted to
 
 
