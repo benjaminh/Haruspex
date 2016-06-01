@@ -117,13 +117,13 @@ def writePages_and_txt4ana(working_directory, write_lastsection, mini_size, para
 
     print('\n\n###\nnow uploading to neo4j database, this lasts around 15 secondes\n###')
     #writing outputs
-    try:
-        authenticate("localhost:7474", "neo4j", "haruspex")
-        graph_db = Graph()
-        graph_db.cypher.execute("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n")
-        create_nodes_and_rels(fichesdict, pictdict, refdict, graph_db)
-    except:
-        print('No neo4j database found on localhost:7474, try to (re)start it')
+    # try:
+    authenticate("localhost:7474", "neo4j", "haruspex")
+    graph_db = Graph()
+    graph_db.run("MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE r,n")
+    create_nodes_and_rels(fichesdict, pictdict, refdict, graph_db)
+    # except:
+    #     print('No neo4j database found on localhost:7474, try to (re)start it')
     print('\n\n###\nnow writting output files\n###')
     create_csv_output(working_directory, fichesdict)
     write_jsons(working_directory, fichesdict, fichesordered)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from py2neo import Graph, Node, Relationship, authenticate
+from py2neo import Graph, Node, Relationship, PropertyDict, authenticate
 import re
 
 
@@ -46,8 +46,7 @@ class Picture:
 
     def create_node(self,graph_db):
         pict_properties = {'file': self.file, 'caption': self.caption, }
-        self._node = Node.cast(pict_properties)
-        self._node.labels.add('picture')
+        self._node = Node('picture', **pict_properties)
         graph_db.create(self._node)
 
     def write_row(self, output):
@@ -110,8 +109,7 @@ class Reference:
     def create_node(self,graph_db):
         # Ajouter propriétés du type "modified" ?
         ref_properties = {'content': self.content, }
-        self._node = Node.cast(ref_properties)
-        self._node.labels.add('ref')
+        self._node = Node('ref', **ref_properties)
         graph_db.create(self._node)
 
     def write_row(self, output):
@@ -256,21 +254,20 @@ class Fiche:
     def create_node(self,graph_db):
         # Ajouter propriétés du type "modified" ?
         fiche_properties = {'doc_position': self.number, 'titre': self.title,
-                            'auteur': self.author, 'date_creation': self.date,}
-        self._node = Node.cast(fiche_properties)
-        self._node.labels.add('fiche')
+                            'auteur': self.author, 'date_creation': self.date}
+        self._node = Node("fiche", **fiche_properties)
         graph_db.create(self._node)
 
     def create_relations(self, graph_db, pictdict, refdict):
         for ref in self.refs:
             #Build a relation between the nodes of each the fiche and each fiche's references
             ref_node = refdict[ref]._node
-            relatio = Relationship.cast(ref_node, ("ref"), self._node)
+            relatio = Relationship(ref_node, ("ref"), self._node)
             graph_db.create(relatio)
         #Build a relation between the nodes of each the fiche and each fiche's pictures
         for pict in self.picts:
             pict_node = pictdict[pict]._node
-            relatio = Relationship.cast(pict_node, ("pict"), self._node)
+            relatio = Relationship(pict_node, ("pict"), self._node)
             graph_db.create(relatio)
 
     def write_row(self, output):
