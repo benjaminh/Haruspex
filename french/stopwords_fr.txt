@@ -286,6 +286,11 @@ j'
 j
 J’
 J'
+monsieur
+Monsieur
+Mme
+Madame
+madame
 tu
 ils
 ils

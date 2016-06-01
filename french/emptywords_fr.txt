@@ -124,6 +124,7 @@ seuls
 seul
 changer
 venir
+venant
 suivre
 suivi
 fin
