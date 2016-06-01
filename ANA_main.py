@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 import ANA_useful
+import ANA_writeoutput
 from ANA_extract import nucleus_step, exp_step, recession_step
 import logging
 import time
@@ -17,6 +18,7 @@ config = json.loads(open(join(working_directory, 'ana_config.json')).read())
 config["started_at"]= time.time()
 ANA_useful.setupfolder()# mkir  the useful sub-forlders
 global_steps = int(config['global_steps'])
+print('recherche de candidats à l\'amorce')
 OCC, CAND, PAGES = ANA_useful.build_OCC(Haruspexdir, working_directory, config)
 print('candidats trouvés à l\'amorce:', len(CAND))
 
@@ -53,4 +55,4 @@ while not stop:
         stop = True
 
 #WRITE OUTPUT
-ANA_useful.write_output(CAND, OCC, PAGES, config)
+ANA_writeoutput.write(CAND, OCC, PAGES, config)
