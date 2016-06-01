@@ -285,8 +285,8 @@ def writesurvey(config, CAND, dict_candshape, ending, isTreetaggerInstalled):
     row.append(int(ending))
     row.append(config['steps']["global_steps"])
     row.append(config['steps']["nucleus_nestedsteps"])
-    row.append(config['steps']["recession_threshold"])
-    row.append(config['steps']["nucleus_threshold"])
+    row.append(config['extract']["recession_threshold"])
+    row.append(config['extract']["nucleus_threshold"])
     corpus_name = re.sub(r'/ANA/?$', '', os.getcwd())
     corpus_name = re.sub(r'^.*/', '', corpus_name)
     row.append(corpus_name)#get the currend workingdirectory, get the corpus folder name

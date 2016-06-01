@@ -305,7 +305,7 @@ def build_OCC(Haruspexdir, working_directory, config):
         newnucs_idis.append(next_id)
     if config['extract']['propernouns']:#if the config file ask for building the propernouns as Candidates (Nucleus)
         for propernoun in propernouns:
-            if len(propernouns[propernoun])>=config["propernouns_threshold"]:#if more than one occurrence of the propernoun has been found
+            if len(propernouns[propernoun])>=config['extract']["propernouns_threshold"]:#if more than one occurrence of the propernoun has been found
                 try:
                     next_id = max(CAND)+1
                 except ValueError:#this means it is the first cand, there is no value for max, so there is no bootstrap cand

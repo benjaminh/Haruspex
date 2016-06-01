@@ -59,6 +59,7 @@ target/
 # Custom
 memoireMQ_test/
 *~
+\.gitignore
 *config.json
 app/writer2latex14/*
-*workingdirectory*
+workingdirectory
