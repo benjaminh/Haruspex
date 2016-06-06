@@ -83,6 +83,15 @@ def calc_ponderations(PAGES, KEYWORDS, KEYWORDLINKS, UNIQUELINKS, config):
         keylink.calc_ponderation(config)
     for uniquelink in UNIQUELINKS.values():
         uniquelink.calc_ponderation(config)
+    with open('/home/matthieu/Documents/1_corpora/CIRP2/linking/termweight.csv', 'w') as csvfile:
+        termweight = csv.writer(csvfile)
+        l = {}
+        for keyword in KEYWORDS.values():
+            key = tuple([keyword.in_pages, keyword.weight])
+            l.setdefault(key, 0)
+            l[key] += 1
+        for item, size in l.items():
+            termweight.writerow([item[0], item[1], size])
     #get the extremum values
     max_keylinkponderation = max([keylink.ponderation for keylink in KEYWORDLINKS])
     values = [uniquelink.ponderation for uniquelink in UNIQUELINKS.values()]
@@ -98,7 +107,7 @@ def calc_ponderations(PAGES, KEYWORDS, KEYWORDLINKS, UNIQUELINKS, config):
 def write_csv_files(KEYWORDLINKS, UNIQUELINKS, config, workingdirectory):
     with open(join(workingdirectory, 'linking', 'keylinks.csv'), 'w') as csvfile:
         keylinksfile = csv.writer(csvfile)
-        header = ['source', 'target', 'ponderation', 'shape', 'wiki_shape', 'groups', 'groups_confidence', 'totkeyocc', 'min_occ', 'totsharedocc']
+        header = ['source', 'target', 'ponderation', 'term_weight', 'shape', 'wiki_shape', 'groups', 'groups_confidence', 'totkeyocc', 'min_occ', 'totsharedocc']
         keylinksfile.writerow(header)
         for keylink in KEYWORDLINKS:
             keylink.test_threshold(config)

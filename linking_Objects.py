@@ -38,7 +38,7 @@ class Keyword:
         self.occ = len(self.where)
 
     def log_weight(self, tot_pages, factor):
-        return math.pow(math.log10(nb_pages/self.in_pages), factor)
+        return math.pow(math.log10(tot_pages/self.in_pages), factor)
 
     def cos_weight(self, tot_pages, factor):
         return math.pow(math.cos((self.in_pages-2)/tot_pages), factor)#x-2 because under 2 pages with key there is no link... (so our 0 is translated to 2)
@@ -81,6 +81,11 @@ class Link:
         self.ponderation = 0.0
         self.threshold_passed = True
 
+    def __setattr__(self, name, value):
+        if name == 'ponderation' and value < 0:# avoid conflict combining log and sqrt modes
+            value = 0
+        self.__dict__[name] = value
+
     def scale_pond(self, minpond, maxpond):
         self.ponderation = (self.ponderation-minpond)/(maxpond - minpond)
 
@@ -114,6 +119,8 @@ class UniqueL(Link):
                 pass#TODO calc this value and try to test the results
         if config['uniquelinks']['ponderation_mode'] == 'log':
             self.ponderation = math.log10(self.ponderation)
+        elif config['uniquelinks']['ponderation_mode'] == 'sqrt':
+            self.ponderation = math.sqrt(self.ponderation)
 
     def build_line(self):
         #build a specific line to be written in the csv
@@ -131,7 +138,7 @@ class KeywordL(Link):
 
     def build_line(self):
         #write the haeder first
-        self.line = [self.source.number, self.target.number, self.ponderation, self.keyword.shape, self.keyword.wiki_shape, self.keyword.group, self.keyword.confidence, self.keyword.occ, self.min_occ, self.occ_insource + self.occ_intarget]
+        self.line = [self.source.number, self.target.number, self.ponderation, self.keyword.weight, self.keyword.shape, self.keyword.wiki_shape, self.keyword.group, self.keyword.confidence, self.keyword.occ, self.min_occ, self.occ_insource + self.occ_intarget]
 
     def _calc_pages_closeness(self, config):
         self.min_occ = min(self.occ_insource, self.occ_intarget)
