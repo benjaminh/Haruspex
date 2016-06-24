@@ -1,4 +1,4 @@
-#Dépendances
+# Dépendances
 - Python 3.4
 - Neo4j > 2.x
 - py2neo v3
@@ -6,6 +6,14 @@
 ## Optionnel mais recommandé:
 treetagger developpés respectivement par le departement de Computational Linguistics de University of Stuttgart
 wrapper python pour treetagger developpé par Laurent Pointal du CNRS LMSI
+
+# Utilisation
+Renseigner le répertoire de travail (contenant les fichiers texte à traiter) danw `workingdirectory`
+- `python3 0Haruspex.py`
+Modifier les fichiers de configuration `.yaml` générés dans le dossier du projet
+- `python3 L2P_main.py`
+- `python3 ANA_main.py`
+- `python3 linking_main.py`
 
 # Future Developpements:
 ## L2P:
