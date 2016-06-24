@@ -1,4 +1,8 @@
 #Dépendances
+- Python 3.4
+- Neo4j > 2.x
+- py2neo v3
+
 ## Optionnel mais recommandé:
 treetagger developpés respectivement par le departement de Computational Linguistics de University of Stuttgart
 wrapper python pour treetagger developpé par Laurent Pointal du CNRS LMSI
