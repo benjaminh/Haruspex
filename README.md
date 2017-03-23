@@ -1,11 +1,13 @@
-# Future Developpements:
-## L2P:
--  permettre de réécrire/corriger/supprimer (superviser l'étape) les fiches.
--  proposer des options pour l'integration des footnotes en rawtextcontent.
--  proposer des options pour l'assemblage de documents en plusieurs txt4ana donc plusieurs sous-projets
--  permettre la gestion du corpus à l'utilisateur (concaténation par sous-ensembles, etc.)
-## ANA:
--  permettre de récupérer les noms propres commençant par une majuscule en initialisation  
-(complément au bootstrap while creating dict_occ_ref.)
+Should transform a corpus of texts into a weighted multi-graph.  
+Each document (Node) is linked to others through shared MWE (Edges).  
+Edges are ponderated by document semantic closeness.
 
-## ANA POO:
+# Unmaintained repo
+Te repo has became private waiting for licence fixes.
+
+# Don't use
+or do as you want but this code was a raw work in progress. 
+- very messy
+- not efficient
+- output poor results
+
